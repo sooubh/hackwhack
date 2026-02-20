@@ -6,6 +6,8 @@ import { calculateNodeRisk } from '@/services/riskEngine';
 import { generatePredictions } from '@/services/predictionEngine';
 import { generateReport } from '@/services/reportGenerator';
 import { orders as staticOrders } from '@/data/orders';
+import { auth, db } from '@/services/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 
 export default function PredictionsDashboard() {
@@ -16,7 +18,39 @@ export default function PredictionsDashboard() {
     const [analysis, setAnalysis] = useState(null);
     const [activeTab, setActiveTab] = useState('overview');
     const [accepted, setAccepted] = useState({});
-    const [resolvedNodes, setResolvedNodes] = useState({}); // nodeId -> { timestamp, reportId }
+    const [resolvedNodes, setResolvedNodes] = useState({});
+    const [loaded, setLoaded] = useState(false);
+
+    // Load saved state from Firebase on mount
+    useEffect(() => {
+        const loadSaved = async () => {
+            const user = auth.currentUser;
+            if (!user || !db) { setLoaded(true); return; }
+            try {
+                const snap = await getDoc(doc(db, `users/${user.uid}/settings`, 'predictions'));
+                if (snap.exists()) {
+                    const data = snap.data();
+                    if (data.accepted) setAccepted(data.accepted);
+                    if (data.resolvedNodes) setResolvedNodes(data.resolvedNodes);
+                }
+            } catch (err) { console.error('Failed to load saved state:', err); }
+            setLoaded(true);
+        };
+        loadSaved();
+    }, []);
+
+    // Save to Firebase whenever accepted or resolvedNodes change
+    const saveToFirebase = async (newAccepted, newResolved) => {
+        const user = auth.currentUser;
+        if (!user || !db) return;
+        try {
+            await setDoc(doc(db, `users/${user.uid}/settings`, 'predictions'), {
+                accepted: newAccepted,
+                resolvedNodes: newResolved,
+                updatedAt: new Date().toISOString(),
+            }, { merge: true });
+        } catch (err) { console.error('Failed to save:', err); }
+    };
 
     const sortedNodes = useMemo(() => {
         if (!nodes) return [];
@@ -31,8 +65,11 @@ export default function PredictionsDashboard() {
     const resolvedList = sortedNodes.filter(n => resolvedNodes[n.id]);
 
     useEffect(() => {
-        if (activeNodes.length > 0 && !selectedNode) handleSelectNode(activeNodes[0]);
-    }, [sortedNodes]);
+        if (loaded && sortedNodes.length > 0 && !selectedNode) {
+            const first = activeNodes.length > 0 ? activeNodes[0] : sortedNodes[0];
+            handleSelectNode(first);
+        }
+    }, [sortedNodes, loaded]);
 
     const handleSelectNode = (node) => {
         setSelectedNode(node);
@@ -45,13 +82,14 @@ export default function PredictionsDashboard() {
     };
 
     const handleAccept = (type, details, key) => {
-        setAccepted(prev => ({ ...prev, [key]: true }));
+        const newAccepted = { ...accepted, [key]: true };
+        setAccepted(newAccepted);
+        saveToFirebase(newAccepted, resolvedNodes);
         const reportId = generateReport({ type, details, node: selectedNode, timestamp: Date.now() });
-        toast.success(`✅ Accepted! Report #${reportId} generated.`);
+        toast.success(`✅ Accepted & saved! Report #${reportId} generated.`);
     };
 
     const handleResolveNode = (node) => {
-        // Generate comprehensive report for the entire node
         const rd = calculateNodeRisk(node, events);
         const fullAnalysis = generatePredictions(node, rd, events, nodes, routes, staticOrders);
         const reportId = generateReport({
@@ -63,12 +101,12 @@ export default function PredictionsDashboard() {
                 impact: rd.score >= 50 ? 'High' : 'Medium',
                 priority: 'completed',
             },
-            node,
-            timestamp: Date.now(),
+            node, timestamp: Date.now(),
         });
-        setResolvedNodes(prev => ({ ...prev, [node.id]: { timestamp: Date.now(), reportId } }));
-        toast.success(`✅ ${node.name} marked as resolved! Report downloaded.`);
-        // Select next active node
+        const newResolved = { ...resolvedNodes, [node.id]: { timestamp: Date.now(), reportId } };
+        setResolvedNodes(newResolved);
+        saveToFirebase(accepted, newResolved);
+        toast.success(`✅ ${node.name} resolved & saved!`);
         const remaining = activeNodes.filter(n => n.id !== node.id);
         if (remaining.length > 0) handleSelectNode(remaining[0]);
     };
@@ -95,7 +133,7 @@ export default function PredictionsDashboard() {
 
     return (
         <div style={{ display: 'flex', height: '100%', background: t.bg, color: t.text, overflow: 'hidden' }}>
-            {/* Sidebar: Active + Resolved */}
+            {/* Sidebar */}
             <div style={{ width: '270px', minWidth: '270px', borderRight: `1px solid ${t.border}`, background: t.bgCard, display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <div style={{ padding: '20px', borderBottom: `1px solid ${t.border}` }}>
                     <h2 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: t.heading, display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -107,7 +145,6 @@ export default function PredictionsDashboard() {
                     </div>
                 </div>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '10px' }}>
-                    {/* Active Nodes */}
                     {activeNodes.length > 0 && (
                         <>
                             <div style={{ fontSize: '10px', fontWeight: 800, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', padding: '8px 12px 4px' }}>⚠️ Active Issues ({activeNodes.length})</div>
@@ -124,7 +161,6 @@ export default function PredictionsDashboard() {
                                                 </div>
                                                 <span style={{ fontSize: '11px', color: t.textMuted }}>{node.type} • {node.region}</span>
                                             </div>
-                                            {/* Resolve button */}
                                             <div style={{ padding: '0 12px 10px' }}>
                                                 <button onClick={(e) => { e.stopPropagation(); handleResolveNode(node); }}
                                                     style={{ width: '100%', padding: '6px', borderRadius: '8px', fontSize: '11px', fontWeight: 700, border: `1px solid ${t.successBorder}`, background: t.successBg, color: t.success, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
@@ -138,8 +174,6 @@ export default function PredictionsDashboard() {
                             </div>
                         </>
                     )}
-
-                    {/* Resolved Nodes */}
                     {resolvedList.length > 0 && (
                         <>
                             <div style={{ fontSize: '10px', fontWeight: 800, color: t.success, textTransform: 'uppercase', letterSpacing: '0.05em', padding: '8px 12px 4px' }}>✅ Resolved ({resolvedList.length})</div>
@@ -155,7 +189,7 @@ export default function PredictionsDashboard() {
                                                 <span style={{ fontSize: '10px', fontWeight: 800, padding: '2px 6px', borderRadius: '6px', background: t.successBg, color: t.success }}>✓</span>
                                             </div>
                                             <span style={{ fontSize: '11px', color: t.textMuted }}>
-                                                Resolved {new Date(info.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                Resolved {info?.timestamp ? new Date(info.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                                             </span>
                                         </div>
                                     );
@@ -163,12 +197,11 @@ export default function PredictionsDashboard() {
                             </div>
                         </>
                     )}
-
                     {activeNodes.length === 0 && resolvedList.length > 0 && (
                         <div style={{ textAlign: 'center', padding: '24px 16px', marginTop: '16px' }}>
                             <span className="material-icons-outlined" style={{ fontSize: '40px', color: t.success, display: 'block', marginBottom: '8px' }}>verified</span>
                             <p style={{ fontSize: '14px', fontWeight: 700, color: t.success }}>All Issues Resolved!</p>
-                            <p style={{ fontSize: '12px', color: t.textMuted }}>All nodes have been reviewed and resolved.</p>
+                            <p style={{ fontSize: '12px', color: t.textMuted }}>All nodes have been reviewed.</p>
                         </div>
                     )}
                 </div>
@@ -182,7 +215,6 @@ export default function PredictionsDashboard() {
                     </div>
                 ) : (
                     <div style={{ maxWidth: '860px', margin: '0 auto' }}>
-                        {/* Resolved banner */}
                         {resolvedNodes[selectedNode.id] && (
                             <div style={{ background: t.successBg, border: `1px solid ${t.successBorder}`, borderRadius: '12px', padding: '14px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <span className="material-icons-outlined" style={{ color: t.success, fontSize: '22px' }}>verified</span>
@@ -192,8 +224,6 @@ export default function PredictionsDashboard() {
                                 </div>
                             </div>
                         )}
-
-                        {/* Header */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
                             <div>
                                 <h1 style={{ fontSize: '24px', fontWeight: 800, color: t.heading, margin: 0 }}>{selectedNode.name}</h1>
