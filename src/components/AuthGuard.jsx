@@ -3,7 +3,8 @@
 // Redirects unauthenticated users to /login
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth, onAuthStateChanged } from '@/services/firebase';
+import { auth, onAuthStateChanged, db } from '@/services/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export default function AuthGuard({ children }) {
     const router = useRouter();
@@ -11,10 +12,40 @@ export default function AuthGuard({ children }) {
     const [user, setUser] = useState(null);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
-                setUser(firebaseUser);
-                setStatus('authenticated');
+                try {
+                    // Fetch user profile from Firestore to get RBAC role
+                    const userDocRef = doc(db, 'users', firebaseUser.uid);
+                    const userDoc = await getDoc(userDocRef);
+                    let role = 'viewer';
+
+                    // Hardcode Admin privileges for specific Master Admin UID
+                    if (firebaseUser.uid === 'lBWeu274tEbyKLwKrqGIu1WPcs42') {
+                        role = 'admin';
+                    } else if (userDoc.exists()) {
+                        role = userDoc.data().role || 'viewer';
+                    }
+
+                    if (!userDoc.exists()) {
+                        // Create default profile for first-time login
+                        await setDoc(userDocRef, {
+                            email: firebaseUser.email,
+                            displayName: firebaseUser.displayName,
+                            role: role,
+                            createdAt: new Date().toISOString()
+                        });
+                    }
+
+                    // Inject the role into the user object
+                    setUser({ ...firebaseUser, role });
+                    setStatus('authenticated');
+                } catch (error) {
+                    console.error("Error fetching user role:", error);
+                    // Fallback access
+                    setUser({ ...firebaseUser, role: 'viewer' });
+                    setStatus('authenticated');
+                }
             } else {
                 setStatus('unauthenticated');
                 router.push('/login');
@@ -50,5 +81,5 @@ export default function AuthGuard({ children }) {
     if (status === 'unauthenticated') return null;
 
     // Pass user to children via React cloneElement if it's a single element
-    return typeof children === 'function' ? children(user) : children;
+    return (typeof children === 'function') ? children(user) : children;
 }

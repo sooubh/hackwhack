@@ -40,7 +40,7 @@ export default function DashboardPage() {
         );
     }
 
-    const stats = getNetworkStats(nodes || []);
+    const stats = getNetworkStats(nodes || [], events || []);
 
     return (
         <AuthGuard>
@@ -97,6 +97,38 @@ export default function DashboardPage() {
                                     trendValue="Active now"
                                 />
                             </div>
+
+                            {/* Privileged Role Section */}
+                            {(user?.role === 'admin' || user?.role === 'manager') && (
+                                <div style={{
+                                    marginBottom: '28px',
+                                    padding: '24px',
+                                    background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(34, 211, 238, 0.05))',
+                                    border: '1px solid rgba(59, 130, 246, 0.2)',
+                                    borderRadius: '16px'
+                                }}>
+                                    <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#60a5fa', marginBottom: '8px' }}>
+                                        {user.role === 'admin' ? 'Administrator Controls' : 'Manager Overview'}
+                                    </h2>
+                                    <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '16px' }}>
+                                        Welcome to the privileged dashboard. Based on your role, you have access to advanced AI simulation models and application management features.
+                                    </p>
+                                    <div style={{ display: 'flex', gap: '12px' }}>
+                                        <button style={{
+                                            padding: '8px 16px', background: '#3b82f6', color: '#fff', fontSize: '13px', fontWeight: 600, borderRadius: '8px', border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+                                        }}>
+                                            Run AI Risk Simulation
+                                        </button>
+                                        {user.role === 'admin' && (
+                                            <button style={{
+                                                padding: '8px 16px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', fontSize: '13px', fontWeight: 600, borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.3)', cursor: 'pointer'
+                                            }}>
+                                                Manage Global Access
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
                                 {/* Alerts feed */}

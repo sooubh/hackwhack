@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# SupplyGuard AI 🛡️
 
-## Getting Started
+**SupplyGuard AI** is a next-generation Supply Chain Disruption & Prediction Platform. It leverages the blazing-fast Gemini 2.0 Flash Multimodal Live API and a real-time isolated Firebase backend to provide global logistics managers with an interactive, intelligent "What-If" analysis console.
 
-First, run the development server:
+## ✨ Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **🌐 Interactive Risk Map:** Real-time visualization of interconnected global supply chain nodes (ports, factories, warehouses) using `react-simple-maps`.
+- **🗣️ AI Voice Assistant:** A sleek, low-latency, two-way voice assistant powered natively by the **Gemini 2.0 Flash WebSocket API**. Talk to the AI to query your network's health.
+- **🔮 Predictive AI Engine:** Click on any high-risk node to instantly run "What-If" analysis. The system mocks live external telemetry (Weather, Geopolitical Traffic) and pipes it to Gemini to generate timeline delay predictions and alternative routing suggestions.
+- **🚨 Automated Alerting System:** Simulated dynamic ingestion of global events (e.g. typhoons, strikes) that trigger system-wide, real-time toast notifications and populate an interactive Alerts Feed.
+- **🔐 True Multi-Tenant Security:** Full Role-Based Access Control (Admin vs. Viewer) and complete Data Isolation. Every authenticated user operates inside their own Firebase sandbox. 
+
+## 🏗️ Technology Stack
+
+- **Frontend:** Next.js (App Router), React, Vanilla CSS, Lucide Icons
+- **Mapping:** `react-simple-maps`, `d3-geo`
+- **Notifications:** `react-hot-toast`
+- **Backend/Database:** Firebase Authentication & Cloud Firestore (Real-time Document DB)
+- **AI/LLM:** Google Gemini 2.0 Flash Multimodal Native API (`@google/generative-ai`)
+
+## 🚀 Getting Started
+
+### 1. Prerequisites
+- Node.js `18.x` or higher
+- A Firebase Project (with Auth and Firestore enabled)
+- A Google Gemini API Key
+
+### 2. Environment Variables
+Create a `.env.local` file in the root directory:
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=your_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_domain
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_bucket
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender
+NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+
+NEXT_PUBLIC_GEMINI_API_KEY=your_gemini_key
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 3. Installation
+```bash
+npm install
+# or
+yarn install
+```
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+### 4. Run the Development Server
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the application.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 💾 Seeding Database
+Because the platform uses Tenant-Isolated databases, your dashboard will be empty when you first log in! 
+1. Navigate to the **Settings** page via the sidebar.
+2. Click the purple **Seed Template Data** button.
+3. The platform will automatically populate your secure Firebase sandbox with global nodes, routes, and risk events.
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+*Built with ❤️ utilizing the capabilities of the Gemini API.*

@@ -1,5 +1,6 @@
 import './globals.css';
 import { DataProvider } from '@/contexts/DataContext';
+import { Toaster } from 'react-hot-toast';
 
 export const metadata = {
   title: 'SupplyGuard AI — Supply Chain Disruption Platform',
@@ -13,6 +14,17 @@ export default function RootLayout({ children }) {
         <DataProvider>
           {children}
         </DataProvider>
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            style: {
+              background: '#0f172a',
+              color: '#f1f5f9',
+              border: '1px solid rgba(255,255,255,0.1)',
+              fontSize: '14px'
+            }
+          }}
+        />
       </body>
     </html>
   );

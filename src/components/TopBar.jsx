@@ -1,11 +1,33 @@
 'use client';
 // src/components/TopBar.jsx
 import { Bell, Search, User, ChevronDown } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { signOut } from '@/services/firebase';
+import { useData } from '@/contexts/DataContext';
+import toast from 'react-hot-toast';
 
 export default function TopBar({ user }) {
     const [showMenu, setShowMenu] = useState(false);
+    const { alerts } = useData();
+    const prevAlertsLength = useRef(0);
+
+    const unreadCount = alerts?.filter(a => !a.read).length || 0;
+
+    // Detect new alerts and trigger global toast notification
+    useEffect(() => {
+        if (alerts && alerts.length > prevAlertsLength.current && prevAlertsLength.current > 0) {
+            // Find the newest alert (assuming appended to end or by timestamp)
+            const newAlert = alerts[alerts.length - 1];
+            if (newAlert && !newAlert.read) {
+                if (newAlert.severity === 'critical' || newAlert.severity === 'high') {
+                    toast.error(`Critical Alert: ${newAlert.title}`);
+                } else {
+                    toast.success(`Notice: ${newAlert.title}`, { icon: '⚠️' });
+                }
+            }
+        }
+        prevAlertsLength.current = alerts?.length || 0;
+    }, [alerts]);
 
     const handleSignOut = async () => {
         await signOut();
@@ -63,18 +85,20 @@ export default function TopBar({ user }) {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
                 <Bell size={16} />
-                <span style={{
-                    position: 'absolute',
-                    top: '-4px', right: '-4px',
-                    background: '#ef4444',
-                    color: '#fff',
-                    fontSize: '9px',
-                    fontWeight: 700,
-                    width: '16px', height: '16px',
-                    borderRadius: '50%',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    border: '2px solid #070b14',
-                }}>3</span>
+                {unreadCount > 0 && (
+                    <span style={{
+                        position: 'absolute',
+                        top: '-4px', right: '-4px',
+                        background: '#ef4444',
+                        color: '#fff',
+                        fontSize: '9px',
+                        fontWeight: 700,
+                        width: '16px', height: '16px',
+                        borderRadius: '50%',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        border: '2px solid #070b14',
+                    }}>{unreadCount}</span>
+                )}
             </button>
 
             {/* User avatar */}
@@ -105,9 +129,24 @@ export default function TopBar({ user }) {
                             <User size={14} color="#fff" />
                         )}
                     </div>
-                    <span style={{ fontSize: '13px', fontWeight: 500, maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {user?.displayName || user?.email?.split('@')[0] || 'Analyst'}
-                    </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 500, maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {user?.displayName || user?.email?.split('@')[0] || 'Analyst'}
+                        </span>
+                        <span style={{
+                            fontSize: '9px',
+                            fontWeight: 700,
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.05em',
+                            color: user?.role === 'admin' ? '#ef4444' : (user?.role === 'manager' ? '#3b82f6' : '#10b981'),
+                            background: user?.role === 'admin' ? 'rgba(239, 68, 68, 0.1)' : (user?.role === 'manager' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(16, 185, 129, 0.1)'),
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            marginTop: '2px'
+                        }}>
+                            {user?.role || 'viewer'}
+                        </span>
+                    </div>
                     <ChevronDown size={12} color="#475569" />
                 </button>
 

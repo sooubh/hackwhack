@@ -16,13 +16,13 @@ export default function SettingsPage() {
 
     const { nodes, routes, events, alerts, error } = useData();
 
-    const handleSeedData = async () => {
+    const handleSeedData = async (userId) => {
         setSeeding(true);
-        setStatusMessage({ text: 'Initializing database seed...', type: 'info' });
+        setStatusMessage({ text: 'Initializing tenant database seed...', type: 'info' });
 
         try {
-            await seedDummyDataToFirebase();
-            setStatusMessage({ text: 'Successfully seeded entire database to Firebase!', type: 'success' });
+            await seedDummyDataToFirebase(userId);
+            setStatusMessage({ text: 'Successfully seeded your isolated database sandbox!', type: 'success' });
         } catch (err) {
             console.error("Seeding failed", err);
             setStatusMessage({ text: `Failed to seed: ${err.message}`, type: 'error' });
@@ -31,17 +31,17 @@ export default function SettingsPage() {
         }
     };
 
-    const handleClearData = async () => {
-        if (!window.confirm("Are you sure you want to completely erase the live database? This action cannot be undone.")) {
+    const handleClearData = async (userId) => {
+        if (!window.confirm("Are you sure you want to completely erase your data? This action cannot be undone.")) {
             return;
         }
 
         setClearing(true);
-        setStatusMessage({ text: 'Erasing live database...', type: 'info' });
+        setStatusMessage({ text: 'Erasing your tenant database...', type: 'info' });
 
         try {
-            await clearFirebaseDatabase();
-            setStatusMessage({ text: 'Successfully wiped the live Firebase database.', type: 'success' });
+            await clearFirebaseDatabase(userId);
+            setStatusMessage({ text: 'Successfully wiped your isolated database.', type: 'success' });
         } catch (err) {
             console.error("Database clear failed", err);
             setStatusMessage({ text: `Failed to clear: ${err.message}`, type: 'error' });
@@ -65,7 +65,7 @@ export default function SettingsPage() {
                                     Platform Settings
                                 </h1>
                                 <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '32px' }}>
-                                    Manage application configurations and database state.
+                                    Manage your isolated tenant sandbox and data state.
                                 </p>
 
                                 {/* Firebase Status Card */}
@@ -79,15 +79,15 @@ export default function SettingsPage() {
                                 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                                         <Database color="#22d3ee" size={24} />
-                                        <h2 style={{ fontSize: '18px', fontWeight: 600, margin: 0 }}>Database Administration</h2>
+                                        <h2 style={{ fontSize: '18px', fontWeight: 600, margin: 0 }}>Tenant Sandboxes</h2>
                                     </div>
 
                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
                                         {[
-                                            { label: 'Total Nodes', count: nodes?.length || 0, color: '#22d3ee' },
-                                            { label: 'Total Routes', count: routes?.length || 0, color: '#c084fc' },
-                                            { label: 'Active Events', count: events?.length || 0, color: '#fb923c' },
-                                            { label: 'Alerts', count: alerts?.length || 0, color: '#f87171' },
+                                            { label: 'My Nodes', count: nodes?.length || 0, color: '#22d3ee' },
+                                            { label: 'My Routes', count: routes?.length || 0, color: '#c084fc' },
+                                            { label: 'My Events', count: events?.length || 0, color: '#fb923c' },
+                                            { label: 'My Alerts', count: alerts?.length || 0, color: '#f87171' },
                                         ].map(stat => (
                                             <div key={stat.label} style={{
                                                 background: 'rgba(15, 23, 42, 0.5)',
@@ -125,14 +125,14 @@ export default function SettingsPage() {
                                         padding: '20px',
                                         border: '1px solid rgba(255,255,255,0.05)'
                                     }}>
-                                        <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#cbd5e1', marginBottom: '8px', margin: 0 }}>Database Operations</h3>
+                                        <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#cbd5e1', marginBottom: '8px', margin: 0 }}>Sandbox Operations</h3>
                                         <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '20px', lineHeight: 1.5 }}>
-                                            You can reset your data using templates or completely clear the collections to start fresh. Ensure you proceed with caution before modifying live database instances.
+                                            You can reset your isolated tenant data using templates or completely clear the collections to start fresh. This only affects your specific account.
                                         </p>
 
                                         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                                             <button
-                                                onClick={handleSeedData}
+                                                onClick={() => handleSeedData(user.uid)}
                                                 disabled={seeding || clearing}
                                                 style={{
                                                     display: 'flex', alignItems: 'center', gap: '8px',
@@ -154,7 +154,7 @@ export default function SettingsPage() {
                                             </button>
 
                                             <button
-                                                onClick={handleClearData}
+                                                onClick={() => handleClearData(user.uid)}
                                                 disabled={seeding || clearing}
                                                 style={{
                                                     display: 'flex', alignItems: 'center', gap: '8px',

@@ -1,24 +1,23 @@
 // src/services/riskEngine.js
-import { events } from '@/data/events';
 
 /**
  * Calculate risk score for a node (0-100)
  * Weights: weather(30) + traffic(25) + reliability(20) + disasters(15) + history(10)
  */
-export function calculateNodeRisk(node) {
-    const nodeEvents = events.filter(e => e.affectedNodes.includes(node.id));
+export function calculateNodeRisk(node, currentEvents = []) {
+    const nodeEvents = currentEvents.filter(e => e.affectedNodes?.includes(node.id));
 
     const weatherScore = nodeEvents
         .filter(e => e.type === 'weather')
-        .reduce((acc, e) => Math.max(acc, e.weatherImpact), 0);
+        .reduce((acc, e) => Math.max(acc, e.weatherImpact || (e.severity === 'critical' ? 100 : e.severity === 'high' ? 70 : 40)), 0);
 
     const trafficScore = nodeEvents
-        .filter(e => ['congestion', 'infrastructure', 'geopolitical'].includes(e.type))
-        .reduce((acc, e) => Math.max(acc, e.trafficImpact), 0);
+        .filter(e => ['congestion', 'infrastructure', 'geopolitical', 'logistics'].includes(e.type))
+        .reduce((acc, e) => Math.max(acc, e.trafficImpact || (e.severity === 'critical' ? 100 : e.severity === 'high' ? 70 : 40)), 0);
 
     const disasterScore = nodeEvents
         .filter(e => e.type === 'disaster')
-        .reduce((acc, e) => Math.max(acc, e.weatherImpact + e.trafficImpact), 0) / 2;
+        .reduce((acc, e) => Math.max(acc, (e.weatherImpact || 100) + (e.trafficImpact || 100)), 0) / 2;
 
     // Reliability score: invert so low reliability = high risk
     const reliabilityRisk = Math.max(0, 100 - node.reliability);
@@ -53,13 +52,13 @@ export function calculateNodeRisk(node) {
 /**
  * Calculate risk for a route (average of its endpoint nodes)
  */
-export function calculateRouteRisk(route, nodes) {
+export function calculateRouteRisk(route, nodes, currentEvents = []) {
     const fromNode = nodes.find(n => n.id === route.from);
     const toNode = nodes.find(n => n.id === route.to);
     if (!fromNode || !toNode) return { score: 0, category: 'Low', color: '#22c55e' };
 
-    const fromRisk = calculateNodeRisk(fromNode);
-    const toRisk = calculateNodeRisk(toNode);
+    const fromRisk = calculateNodeRisk(fromNode, currentEvents);
+    const toRisk = calculateNodeRisk(toNode, currentEvents);
     const score = Math.round((fromRisk.score + toRisk.score) / 2);
 
     return {
@@ -72,9 +71,9 @@ export function calculateRouteRisk(route, nodes) {
 /**
  * Get summary stats for the whole network
  */
-export function getNetworkStats(nodes) {
-    const risks = nodes.map(n => calculateNodeRisk(n));
-    const avg = Math.round(risks.reduce((a, r) => a + r.score, 0) / risks.length);
+export function getNetworkStats(nodes, currentEvents = []) {
+    const risks = nodes.map(n => calculateNodeRisk(n, currentEvents));
+    const avg = Math.round(risks.reduce((a, r) => a + r.score, 0) / (risks.length || 1));
     const high = risks.filter(r => r.category === 'High').length;
     const medium = risks.filter(r => r.category === 'Medium').length;
     const low = risks.filter(r => r.category === 'Low').length;

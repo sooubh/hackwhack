@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, Map, Brain, Bell, Settings, Shield, Zap } from 'lucide-react';
+import { useData } from '@/contexts/DataContext';
 
 const navItems = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -14,6 +15,8 @@ const navItems = [
 
 export default function Sidebar() {
     const pathname = usePathname();
+    const { alerts } = useData();
+    const unreadCount = alerts?.filter(a => !a.read).length || 0;
 
     return (
         <aside style={{
@@ -95,7 +98,7 @@ export default function Sidebar() {
                                 }}>
                                 <Icon size={16} />
                                 {label}
-                                {label === 'Alerts' && (
+                                {label === 'Alerts' && unreadCount > 0 && (
                                     <span style={{
                                         marginLeft: 'auto',
                                         background: '#ef4444',
@@ -106,7 +109,7 @@ export default function Sidebar() {
                                         borderRadius: '10px',
                                         minWidth: '20px',
                                         textAlign: 'center',
-                                    }}>3</span>
+                                    }}>{unreadCount}</span>
                                 )}
                             </div>
                         </Link>

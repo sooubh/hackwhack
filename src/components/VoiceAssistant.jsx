@@ -9,8 +9,8 @@ const MODEL = "models/gemini-2.5-flash-native-audio-preview-12-2025";
 const HOST = "generativelanguage.googleapis.com";
 
 export default function VoiceAssistant() {
-    const { nodes, alerts } = useData();
-    const networkStats = getNetworkStats(nodes || []);
+    const { nodes, alerts, events } = useData();
+    const networkStats = getNetworkStats(nodes || [], events || []);
     const [open, setOpen] = useState(false);
     const [connected, setConnected] = useState(false);
     const [listening, setListening] = useState(false);
