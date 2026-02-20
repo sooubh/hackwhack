@@ -5,17 +5,27 @@ import Sidebar from '@/components/Sidebar';
 import TopBar from '@/components/TopBar';
 import AlertsFeed from '@/components/AlertsFeed';
 import VoiceAssistant from '@/components/VoiceAssistant';
-import { alerts } from '@/data/alerts';
+import { useData } from '@/contexts/DataContext';
 import { Bell, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 
-const severityCounts = {
-    critical: alerts.filter(a => a.severity === 'critical').length,
-    high: alerts.filter(a => a.severity === 'high').length,
-    medium: alerts.filter(a => a.severity === 'medium').length,
-    low: alerts.filter(a => a.severity === 'low').length,
-};
-
 export default function AlertsPage() {
+    const { alerts, loading } = useData();
+    const safeAlerts = alerts || [];
+
+    const severityCounts = {
+        critical: safeAlerts.filter(a => a.severity === 'critical').length,
+        high: safeAlerts.filter(a => a.severity === 'high').length,
+        medium: safeAlerts.filter(a => a.severity === 'medium').length,
+        low: safeAlerts.filter(a => a.severity === 'low').length,
+    };
+
+    if (loading) {
+        return (
+            <div style={{ display: 'flex', minHeight: '100vh', background: '#070b14', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+                Loading alerts data...
+            </div>
+        );
+    }
     return (
         <AuthGuard>
             {(user) => (
@@ -30,7 +40,7 @@ export default function AlertsPage() {
                                     Disruption Alerts
                                 </h1>
                                 <p style={{ fontSize: '13px', color: '#475569' }}>
-                                    {alerts.filter(a => !a.read).length} unread · {alerts.length} total alerts
+                                    {safeAlerts.filter(a => !a.read).length} unread · {safeAlerts.length} total alerts
                                 </p>
                             </div>
 
@@ -77,7 +87,7 @@ export default function AlertsPage() {
                                     <Bell size={16} color="#22d3ee" />
                                     <h2 style={{ fontSize: '15px', fontWeight: 700, color: '#f1f5f9' }}>All Alerts</h2>
                                 </div>
-                                <AlertsFeed alerts={alerts} maxItems={alerts.length} />
+                                <AlertsFeed alerts={safeAlerts} maxItems={safeAlerts.length} />
                             </div>
                         </main>
                     </div>

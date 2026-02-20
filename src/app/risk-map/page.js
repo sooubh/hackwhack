@@ -8,8 +8,9 @@ import Sidebar from '@/components/Sidebar';
 import TopBar from '@/components/TopBar';
 import RiskScoreCard from '@/components/RiskScoreCard';
 import VoiceAssistant from '@/components/VoiceAssistant';
-import { nodes, nodeTypes } from '@/data/supplyChain';
+import { nodeTypes } from '@/data/supplyChain';
 import { calculateNodeRisk, getNetworkStats } from '@/services/riskEngine';
+import { useData } from '@/contexts/DataContext';
 
 // Leaflet MUST be dynamic (no SSR)
 const NetworkMap = dynamic(() => import('@/components/NetworkMap'), {
@@ -27,15 +28,26 @@ export default function RiskMapPage() {
     const [selectedNode, setSelectedNode] = useState(null);
     const [filter, setFilter] = useState('all');
 
-    const nodeRisks = useMemo(() => {
-        return Object.fromEntries(nodes.map(n => [n.id, calculateNodeRisk(n)]));
-    }, []);
+    const { nodes, loading } = useData();
+    const safeNodes = nodes || [];
 
-    const stats = getNetworkStats(nodes);
+    const nodeRisks = useMemo(() => {
+        return Object.fromEntries(safeNodes.map(n => [n.id, calculateNodeRisk(n)]));
+    }, [safeNodes]);
+
+    if (loading) {
+        return (
+            <div style={{ display: 'flex', minHeight: '100vh', background: '#070b14', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+                Loading map data...
+            </div>
+        );
+    }
+
+    const stats = getNetworkStats(safeNodes);
 
     const filteredNodes = filter === 'all'
-        ? nodes
-        : nodes.filter(n => nodeRisks[n.id]?.category.toLowerCase() === filter);
+        ? safeNodes
+        : safeNodes.filter(n => nodeRisks[n.id]?.category.toLowerCase() === filter);
 
     return (
         <AuthGuard>

@@ -8,14 +8,25 @@ import TopBar from '@/components/TopBar';
 import PredictionPanel from '@/components/PredictionPanel';
 import AlternativesPanel from '@/components/AlternativesPanel';
 import VoiceAssistant from '@/components/VoiceAssistant';
-import { nodes, nodeTypes } from '@/data/supplyChain';
+import { nodeTypes } from '@/data/supplyChain';
 import { calculateNodeRisk } from '@/services/riskEngine';
 import { Brain, ChevronRight } from 'lucide-react';
+import { useData } from '@/contexts/DataContext';
 
 export default function PredictionsPage() {
     const [selectedNode, setSelectedNode] = useState(null);
+    const { nodes, loading } = useData();
+    const safeNodes = nodes || [];
 
     const riskData = selectedNode ? calculateNodeRisk(selectedNode) : null;
+
+    if (loading) {
+        return (
+            <div style={{ display: 'flex', minHeight: '100vh', background: '#070b14', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+                Loading prediction data...
+            </div>
+        );
+    }
 
     return (
         <AuthGuard>
@@ -41,7 +52,7 @@ export default function PredictionsPage() {
                                         SELECT NODE TO PREDICT
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                                        {nodes
+                                        {safeNodes
                                             .sort((a, b) => calculateNodeRisk(b).score - calculateNodeRisk(a).score)
                                             .map(node => {
                                                 const risk = calculateNodeRisk(node);

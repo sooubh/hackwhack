@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Brain, Loader, Clock, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
 import { predictDisruptions } from '@/services/gemini';
-import { events } from '@/data/events';
+import { useData } from '@/contexts/DataContext';
 
 const confidenceColor = (c) => c >= 75 ? '#22c55e' : c >= 50 ? '#f59e0b' : '#ef4444';
 const impactColor = (i) => i === 'High' ? '#ef4444' : i === 'Medium' ? '#f59e0b' : '#22c55e';
@@ -12,13 +12,14 @@ export default function PredictionPanel({ node, riskData }) {
     const [loading, setLoading] = useState(false);
     const [prediction, setPrediction] = useState(null);
     const [error, setError] = useState(null);
+    const { events } = useData();
 
     const handlePredict = async () => {
         if (!node) return;
         setLoading(true);
         setError(null);
         try {
-            const result = await predictDisruptions(node, riskData, events);
+            const result = await predictDisruptions(node, riskData, events || []);
             setPrediction(result);
         } catch (e) {
             setError('Failed to get prediction. Please try again.');

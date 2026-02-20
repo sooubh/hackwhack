@@ -17,6 +17,13 @@ export const nodes = [
     { id: 'S13', name: 'Lagos Supplier', type: 'supplier', lat: 6.5244, lng: 3.3792, country: 'Nigeria', region: 'Africa', reliability: 62 },
     { id: 'S14', name: 'Sydney Depot', type: 'warehouse', lat: -33.8688, lng: 151.2093, country: 'Australia', region: 'Oceania', reliability: 92 },
     { id: 'S15', name: 'Tokyo Supplier', type: 'supplier', lat: 35.6762, lng: 139.6503, country: 'Japan', region: 'Asia', reliability: 97 },
+    { id: 'S16', name: 'Los Angeles Port', type: 'port', lat: 34.0522, lng: -118.2437, country: 'USA', region: 'Americas', reliability: 86 },
+    { id: 'S17', name: 'Vancouver Hub', type: 'port', lat: 49.2827, lng: -123.1207, country: 'Canada', region: 'Americas', reliability: 94 },
+    { id: 'S18', name: 'Mexico City Fab', type: 'factory', lat: 19.4326, lng: -99.1332, country: 'Mexico', region: 'Americas', reliability: 73 },
+    { id: 'S19', name: 'London Dist.', type: 'warehouse', lat: 51.5074, lng: -0.1278, country: 'UK', region: 'Europe', reliability: 91 },
+    { id: 'S20', name: 'Istanbul Gateway', type: 'port', lat: 41.0082, lng: 28.9784, country: 'Turkey', region: 'Europe', reliability: 81 },
+    { id: 'S21', name: 'Seoul Tech', type: 'supplier', lat: 37.5665, lng: 126.9780, country: 'South Korea', region: 'Asia', reliability: 98 },
+    { id: 'S22', name: 'Auckland Depot', type: 'warehouse', lat: -36.8485, lng: 174.7633, country: 'New Zealand', region: 'Oceania', reliability: 95 }
 ];
 
 export const routes = [
@@ -38,6 +45,20 @@ export const routes = [
     { id: 'R16', from: 'S14', to: 'S9', distance: 12000, time: 18, mode: 'air' },
     { id: 'R17', from: 'S4', to: 'S3', distance: 2500, time: 5, mode: 'sea' },
     { id: 'R18', from: 'S6', to: 'S8', distance: 750, time: 1, mode: 'land' },
+    { id: 'R19', from: 'S1', to: 'S16', distance: 10400, time: 14, mode: 'sea' },
+    { id: 'R20', from: 'S15', to: 'S16', distance: 8800, time: 11, mode: 'sea' },
+    { id: 'R21', from: 'S16', to: 'S10', distance: 3200, time: 4, mode: 'land' },
+    { id: 'R22', from: 'S16', to: 'S18', distance: 2900, time: 4, mode: 'land' },
+    { id: 'R23', from: 'S17', to: 'S16', distance: 2100, time: 3, mode: 'sea' },
+    { id: 'R24', from: 'S7', to: 'S19', distance: 360, time: 1, mode: 'sea' },
+    { id: 'R25', from: 'S9', to: 'S19', distance: 5500, time: 8, mode: 'sea' },
+    { id: 'R26', from: 'S5', to: 'S20', distance: 4100, time: 6, mode: 'sea' },
+    { id: 'R27', from: 'S20', to: 'S6', distance: 2200, time: 4, mode: 'land' },
+    { id: 'R28', from: 'S18', to: 'S9', distance: 3900, time: 6, mode: 'land' },
+    { id: 'R29', from: 'S21', to: 'S1', distance: 900, time: 2, mode: 'sea' },
+    { id: 'R30', from: 'S21', to: 'S15', distance: 1100, time: 2, mode: 'sea' },
+    { id: 'R31', from: 'S14', to: 'S22', distance: 2100, time: 3, mode: 'sea' },
+    { id: 'R32', from: 'S22', to: 'S16', distance: 10400, time: 13, mode: 'sea' }
 ];
 
 export const nodeTypes = {

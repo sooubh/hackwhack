@@ -2,6 +2,7 @@
 // Gemini AI integration for supply chain disruption prediction
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { fetchWeatherData, fetchTrafficData, fetchGeopoliticalStatus } from "./externalApis";
 
 const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
@@ -52,12 +53,22 @@ export async function predictDisruptions(node, riskData, activeEvents) {
         .map(e => `- ${e.type.toUpperCase()}: ${e.title} (severity: ${e.severity})`)
         .join('\n') || '- No active disruption events';
 
+    // Fetch external live data
+    const weather = await fetchWeatherData(node.lat, node.lng, node.type === 'port');
+    const traffic = await fetchTrafficData(node.lat, node.lng);
+    const geoStatus = await fetchGeopoliticalStatus(node.country);
+
     const prompt = `You are an AI supply chain analyst. Analyze the following supply chain node and predict disruptions.
 
 Node: ${node.name} (${node.type}) in ${node.country}
 Region: ${node.region}
 Current Risk Score: ${riskData.score}/100 (${riskData.category} risk)
 Node Reliability: ${node.reliability}%
+
+External Context (Real-Time API Data):
+- Weather: ${weather.condition}, ${weather.temperature}. Warning: ${weather.warning}
+- Local Traffic: ${traffic.congestionLevel} congestion. Delay: ${traffic.estimatedDelay}.
+- Geopolitical Status: ${geoStatus.status}. Alert: ${geoStatus.alert}
 
 Active Events Affecting This Node:
 ${eventList}

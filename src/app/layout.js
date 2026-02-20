@@ -1,4 +1,5 @@
 import './globals.css';
+import { DataProvider } from '@/contexts/DataContext';
 
 export const metadata = {
   title: 'SupplyGuard AI — Supply Chain Disruption Platform',
@@ -9,7 +10,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body style={{ margin: 0, background: '#070b14', color: '#f1f5f9', fontFamily: 'Inter, sans-serif' }}>
-        {children}
+        <DataProvider>
+          {children}
+        </DataProvider>
       </body>
     </html>
   );

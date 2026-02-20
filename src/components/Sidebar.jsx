@@ -9,6 +9,7 @@ const navItems = [
     { href: '/risk-map', label: 'Risk Map', icon: Map },
     { href: '/predictions', label: 'AI Predictions', icon: Brain },
     { href: '/alerts', label: 'Alerts', icon: Bell },
+    { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
 export default function Sidebar() {

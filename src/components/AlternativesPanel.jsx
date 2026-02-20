@@ -3,16 +3,17 @@
 import { useState } from 'react';
 import { Route, Loader, Star, Clock, DollarSign, CheckCircle } from 'lucide-react';
 import { suggestAlternatives } from '@/services/gemini';
-import { nodes } from '@/data/supplyChain';
+import { useData } from '@/contexts/DataContext';
 
 export default function AlternativesPanel({ node, riskData }) {
     const [loading, setLoading] = useState(false);
     const [alternatives, setAlternatives] = useState(null);
+    const { nodes } = useData();
 
     const handleFetch = async () => {
         setLoading(true);
         try {
-            const result = await suggestAlternatives(node, riskData, nodes);
+            const result = await suggestAlternatives(node, riskData, nodes || []);
             setAlternatives(result);
         } finally {
             setLoading(false);

@@ -2,8 +2,9 @@
 // src/components/NetworkMap.jsx
 // Dynamic import ensures Leaflet only runs client-side (no SSR)
 import { useEffect, useRef, useState } from 'react';
-import { nodes as supplyNodes, routes, nodeTypes } from '@/data/supplyChain';
+import { nodeTypes } from '@/data/supplyChain';
 import { calculateNodeRisk, calculateRouteRisk } from '@/services/riskEngine';
+import { useData } from '@/contexts/DataContext';
 
 export default function NetworkMap({ onNodeSelect, selectedNodeId, filter = 'all' }) {
     const mapRef = useRef(null);
@@ -12,9 +13,14 @@ export default function NetworkMap({ onNodeSelect, selectedNodeId, filter = 'all
     const polylinesRef = useRef([]);
     const [mapReady, setMapReady] = useState(false);
 
+    // Grab live data from Firebase instead of static imports
+    const { nodes: supplyNodes, routes } = useData();
+    const safeNodes = supplyNodes || [];
+    const safeRoutes = routes || [];
+
     const filteredNodes = filter === 'all'
-        ? supplyNodes
-        : supplyNodes.filter(n => {
+        ? safeNodes
+        : safeNodes.filter(n => {
             const risk = calculateNodeRisk(n);
             return risk.category.toLowerCase() === filter.toLowerCase();
         });

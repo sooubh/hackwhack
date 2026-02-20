@@ -9,12 +9,8 @@ import TopBar from '@/components/TopBar';
 import KpiCard from '@/components/KpiCard';
 import AlertsFeed from '@/components/AlertsFeed';
 import VoiceAssistant from '@/components/VoiceAssistant';
-import { nodes } from '@/data/supplyChain';
-import { alerts } from '@/data/alerts';
-import { getNetworkStats, calculateNodeRisk } from '@/services/riskEngine';
-import { events } from '@/data/events';
-
-const stats = getNetworkStats(nodes);
+import { getNetworkStats } from '@/services/riskEngine';
+import { useData } from '@/contexts/DataContext';
 
 // Risk distribution bar
 function RiskBar({ label, count, total, color }) {
@@ -23,17 +19,29 @@ function RiskBar({ label, count, total, color }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
                 <span style={{ fontSize: '12px', color: '#94a3b8' }}>{label}</span>
                 <span style={{ fontSize: '12px', fontWeight: 600, color }}>
-                    {count} nodes ({Math.round(count / total * 100)}%)
+                    {count} nodes ({total > 0 ? Math.round(count / total * 100) : 0}%)
                 </span>
             </div>
             <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px' }}>
-                <div style={{ width: `${count / total * 100}%`, height: '100%', background: color, borderRadius: '3px', boxShadow: `0 0 8px ${color}` }} />
+                <div style={{ width: `${total > 0 ? (count / total * 100) : 0}%`, height: '100%', background: color, borderRadius: '3px', boxShadow: `0 0 8px ${color}` }} />
             </div>
         </div>
     );
 }
 
 export default function DashboardPage() {
+    const { nodes, events, alerts, loading } = useData();
+
+    if (loading) {
+        return (
+            <div style={{ display: 'flex', minHeight: '100vh', background: '#070b14', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+                Loading dashboard data...
+            </div>
+        );
+    }
+
+    const stats = getNetworkStats(nodes || []);
+
     return (
         <AuthGuard>
             {(user) => (
@@ -58,7 +66,7 @@ export default function DashboardPage() {
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '28px' }}>
                                 <KpiCard
                                     title="Total Nodes"
-                                    value={nodes.length}
+                                    value={nodes?.length || 0}
                                     icon={Network}
                                     color="#22d3ee"
                                     trend="up"
@@ -66,11 +74,11 @@ export default function DashboardPage() {
                                 />
                                 <KpiCard
                                     title="Active Alerts"
-                                    value={alerts.filter(a => !a.read).length}
+                                    value={alerts?.filter(a => !a.read).length || 0}
                                     icon={AlertTriangle}
                                     color="#ef4444"
                                     trend="up"
-                                    trendValue="3 unread"
+                                    trendValue={`${alerts?.filter(a => !a.read).length || 0} unread`}
                                 />
                                 <KpiCard
                                     title="Avg Risk Score"
@@ -78,11 +86,11 @@ export default function DashboardPage() {
                                     icon={Activity}
                                     color={stats.avg >= 66 ? '#ef4444' : stats.avg >= 33 ? '#f59e0b' : '#22c55e'}
                                     trend="down"
-                                    trendValue="↑ from 38 last week"
+                                    trendValue="Live Network Total"
                                 />
                                 <KpiCard
                                     title="High Risk Events"
-                                    value={events.filter(e => e.severity === 'high').length}
+                                    value={events?.filter(e => e.severity === 'high').length || 0}
                                     icon={Clock}
                                     color="#f97316"
                                     trend="up"
@@ -102,7 +110,7 @@ export default function DashboardPage() {
                                         <h2 style={{ fontSize: '15px', fontWeight: 700, color: '#f1f5f9' }}>Recent Alerts</h2>
                                         <Link href="/alerts" style={{ fontSize: '12px', color: '#22d3ee', textDecoration: 'none' }}>View all →</Link>
                                     </div>
-                                    <AlertsFeed alerts={alerts} maxItems={4} />
+                                    <AlertsFeed alerts={alerts || []} maxItems={4} />
                                 </div>
 
                                 {/* Risk distribution & events */}
@@ -115,9 +123,9 @@ export default function DashboardPage() {
                                         padding: '20px',
                                     }}>
                                         <h2 style={{ fontSize: '15px', fontWeight: 700, color: '#f1f5f9', marginBottom: '16px' }}>Risk Distribution</h2>
-                                        <RiskBar label="High Risk" count={stats.high} total={nodes.length} color="#ef4444" />
-                                        <RiskBar label="Medium Risk" count={stats.medium} total={nodes.length} color="#f59e0b" />
-                                        <RiskBar label="Low Risk" count={stats.low} total={nodes.length} color="#22c55e" />
+                                        <RiskBar label="High Risk" count={stats.high} total={nodes?.length || 0} color="#ef4444" />
+                                        <RiskBar label="Medium Risk" count={stats.medium} total={nodes?.length || 0} color="#f59e0b" />
+                                        <RiskBar label="Low Risk" count={stats.low} total={nodes?.length || 0} color="#22c55e" />
                                     </div>
 
                                     {/* Quick access map link */}
@@ -146,7 +154,7 @@ export default function DashboardPage() {
                                                     Open Risk Map
                                                 </div>
                                                 <div style={{ fontSize: '12px', color: '#64748b' }}>
-                                                    View live network with {nodes.length} nodes & routes
+                                                    View live network with {nodes?.length || 0} nodes & routes
                                                 </div>
                                             </div>
                                         </div>
@@ -163,7 +171,7 @@ export default function DashboardPage() {
                             }}>
                                 <h2 style={{ fontSize: '15px', fontWeight: 700, color: '#f1f5f9', marginBottom: '16px' }}>Active Disruption Events</h2>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-                                    {events.map(ev => (
+                                    {(events || []).map(ev => (
                                         <div key={ev.id} style={{
                                             padding: '14px',
                                             background: 'rgba(255,255,255,0.03)',

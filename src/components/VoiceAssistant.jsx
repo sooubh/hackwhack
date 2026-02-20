@@ -3,14 +3,14 @@
 import { useState, useRef, useEffect } from 'react';
 import { Mic, MicOff, X, Volume2, Loader2, Bug, RefreshCw } from 'lucide-react';
 import { getNetworkStats } from '@/services/riskEngine';
-import { nodes } from '@/data/supplyChain';
-import { alerts } from '@/data/alerts';
+import { useData } from '@/contexts/DataContext';
 
-const networkStats = getNetworkStats(nodes);
 const MODEL = "models/gemini-2.5-flash-native-audio-preview-12-2025";
 const HOST = "generativelanguage.googleapis.com";
 
 export default function VoiceAssistant() {
+    const { nodes, alerts } = useData();
+    const networkStats = getNetworkStats(nodes || []);
     const [open, setOpen] = useState(false);
     const [connected, setConnected] = useState(false);
     const [listening, setListening] = useState(false);
@@ -27,6 +27,7 @@ export default function VoiceAssistant() {
     const processorNodeRef = useRef(null);
     const audioOutputQueueRef = useRef([]);
     const isPlayingRef = useRef(false);
+    const nextPlayTimeRef = useRef(0); // Audio smoothing
 
     const logDebug = (msg) => {
         setDebugLog(prev => [...prev.slice(-4), `${new Date().toLocaleTimeString()} - ${msg}`]);
@@ -68,7 +69,6 @@ export default function VoiceAssistant() {
             setConnected(false);
             stopRecording();
 
-            // 1000 is normal closure
             if (event.code !== 1000 && event.code !== 1005 && !errorMessage) {
                 setErrorMessage(`Connection closed unexpectedly (Code: ${event.code})`);
             }
@@ -97,14 +97,18 @@ export default function VoiceAssistant() {
             wsRef.current.close(1000, "User closed modal");
         }
         setConnected(false);
+        audioOutputQueueRef.current = [];
+        isPlayingRef.current = false;
+        nextPlayTimeRef.current = 0;
     };
 
     const sendSetupMessage = () => {
         const contextData = `You are a real-time vocal AI assistant named SupplyGuard AI. You are helping manage a supply chain platform.
+IMPORTANT INSTRUCTION: Automatically detect the language the user is speaking in, and respond in that EXACT same language naturally and fluently. Switch languages dynamically if the user switches languages mid-conversation.
 Current Network Status:
 - Average Risk Score: ${networkStats.avg}/100
 - High Risk Nodes: ${networkStats.high}
-- Active Alerts: ${alerts.length}
+- Active Alerts: ${(alerts || []).length}
 Speak naturally and concisely since this is a real-time voice conversation. Keep answers to less than 3 sentences.`;
 
         const setupMessage = {
@@ -134,7 +138,6 @@ Speak naturally and concisely since this is a real-time voice conversation. Keep
             const turn = data.serverContent.modelTurn;
             if (turn && turn.parts) {
                 turn.parts.forEach(part => {
-                    // Handle Audio
                     if (part.inlineData && part.inlineData.mimeType.startsWith('audio/pcm')) {
                         playAudioChunk(part.inlineData.data);
                     }
@@ -149,7 +152,7 @@ Speak naturally and concisely since this is a real-time voice conversation. Keep
         }
     };
 
-    // --- Audio Playback (Server to Client) ---
+    // --- Audio Playback (Server to Client - Smooth Continuous Streaming) ---
     const playAudioChunk = async (base64Audio) => {
         if (!audioContextRef.current) {
             audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
@@ -171,35 +174,30 @@ Speak naturally and concisely since this is a real-time voice conversation. Keep
         const audioBuffer = audioContextRef.current.createBuffer(1, float32Array.length, 24000);
         audioBuffer.getChannelData(0).set(float32Array);
 
-        audioOutputQueueRef.current.push(audioBuffer);
-        if (!isPlayingRef.current) {
-            playNextChunk();
-        }
-    };
-
-    const playNextChunk = () => {
-        if (audioOutputQueueRef.current.length === 0) {
-            isPlayingRef.current = false;
-            setAiSpeaking(false);
-            return;
-        }
-
-        if (!isPlayingRef.current) {
-            logDebug("AI started speaking...");
-        }
-
-        isPlayingRef.current = true;
-        setAiSpeaking(true);
-
-        const audioBuffer = audioOutputQueueRef.current.shift();
+        // Continuous buffering logic for smoother playback
         const source = audioContextRef.current.createBufferSource();
         source.buffer = audioBuffer;
         source.connect(audioContextRef.current.destination);
 
+        const currentTime = audioContextRef.current.currentTime;
+        if (currentTime < nextPlayTimeRef.current) {
+            source.start(nextPlayTimeRef.current);
+            nextPlayTimeRef.current += audioBuffer.duration;
+        } else {
+            source.start(currentTime);
+            nextPlayTimeRef.current = currentTime + audioBuffer.duration;
+        }
+
+        setAiSpeaking(true);
+        isPlayingRef.current = true;
+
         source.onended = () => {
-            playNextChunk();
+            // Check if we've reached the end of the buffered audio
+            if (audioContextRef.current.currentTime >= nextPlayTimeRef.current - 0.1) {
+                isPlayingRef.current = false;
+                setAiSpeaking(false);
+            }
         };
-        source.start();
     };
 
     // --- Audio Recording (Client to Server) ---
@@ -386,7 +384,7 @@ Speak naturally and concisely since this is a real-time voice conversation. Keep
                                     </div>
                                 </div>
                             </div>
-                            <div style={{ display: 'flex', gap: '8px' }}>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                 <button onClick={() => setShowDebug(!showDebug)} title="Debug Info" style={{ background: 'none', border: 'none', color: showDebug ? '#22d3ee' : '#475569', cursor: 'pointer' }}>
                                     <Bug size={16} />
                                 </button>
