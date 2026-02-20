@@ -4,7 +4,7 @@ import { ThemeProvider } from '@/contexts/ThemeContext';
 import { Toaster } from 'react-hot-toast';
 
 export const metadata = {
-  title: 'Vigilance AI — Supply Chain Management',
+  title: 'SupplyChain AI — Supply Chain Management',
   description: 'AI-powered supply chain management platform for Indian B2B businesses',
 };
 

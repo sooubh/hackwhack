@@ -64,7 +64,7 @@ export default function LoginPage() {
                 <div style={{ textAlign: 'center', marginBottom: '32px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '8px' }}>
                         <span className="material-icons-outlined" style={{ fontSize: '32px', color: t.primary }}>security</span>
-                        <h1 style={{ fontSize: '28px', fontWeight: 800, color: t.heading, margin: 0 }}>Vigilance AI</h1>
+                        <h1 style={{ fontSize: '28px', fontWeight: 800, color: t.heading, margin: 0 }}>SupplyChain AI</h1>
                     </div>
                     <p style={{ fontSize: '14px', color: t.textMuted }}>Supply Chain Management Platform</p>
                 </div>

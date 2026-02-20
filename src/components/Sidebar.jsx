@@ -22,7 +22,7 @@ export default function Sidebar() {
             <div style={{ padding: '0 10px', marginBottom: '32px' }}>
                 <h1 style={{ fontSize: '18px', fontWeight: 800, color: t.primary, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span className="material-icons-outlined" style={{ fontSize: '22px' }}>security</span>
-                    Vigilance AI
+                    SupplyChain AI
                 </h1>
                 <p style={{ fontSize: '11px', color: t.textMuted, marginTop: '4px' }}>Supply Chain Intelligence</p>
             </div>
@@ -48,7 +48,7 @@ export default function Sidebar() {
 
             {/* Footer */}
             <div style={{ padding: '12px 10px', borderTop: `1px solid ${t.border}`, marginTop: '12px' }}>
-                <p style={{ fontSize: '10px', color: t.textMuted, margin: 0 }}>© 2024 Vigilance AI</p>
+                <p style={{ fontSize: '10px', color: t.textMuted, margin: 0 }}>© 2024 SupplyChain AI</p>
                 <p style={{ fontSize: '10px', color: t.textMuted, margin: '2px 0 0' }}>India Operations</p>
             </div>
         </aside>
