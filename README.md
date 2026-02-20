@@ -60,3 +60,12 @@ Because the platform uses Tenant-Isolated databases, your dashboard will be empt
 ---
 
 *Built with ❤️ utilizing the capabilities of the Gemini API.*
+
+👉 6 Pages Total
+
+Login
+Dashboard ⭐
+Network Map
+Risk Analysis
+Predictions & Suggestions
+Voice Assistant / Alerts
