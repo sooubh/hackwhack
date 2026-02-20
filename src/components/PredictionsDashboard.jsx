@@ -15,7 +15,8 @@ export default function PredictionsDashboard() {
     const [riskData, setRiskData] = useState(null);
     const [analysis, setAnalysis] = useState(null);
     const [activeTab, setActiveTab] = useState('overview');
-    const [accepted, setAccepted] = useState({}); // Track accepted suggestions by key
+    const [accepted, setAccepted] = useState({});
+    const [resolvedNodes, setResolvedNodes] = useState({}); // nodeId -> { timestamp, reportId }
 
     const sortedNodes = useMemo(() => {
         if (!nodes) return [];
@@ -26,8 +27,11 @@ export default function PredictionsDashboard() {
         })).sort((a, b) => b.riskScore - a.riskScore);
     }, [nodes, events]);
 
+    const activeNodes = sortedNodes.filter(n => !resolvedNodes[n.id]);
+    const resolvedList = sortedNodes.filter(n => resolvedNodes[n.id]);
+
     useEffect(() => {
-        if (sortedNodes.length > 0 && !selectedNode) handleSelectNode(sortedNodes[0]);
+        if (activeNodes.length > 0 && !selectedNode) handleSelectNode(activeNodes[0]);
     }, [sortedNodes]);
 
     const handleSelectNode = (node) => {
@@ -46,6 +50,29 @@ export default function PredictionsDashboard() {
         toast.success(`✅ Accepted! Report #${reportId} generated.`);
     };
 
+    const handleResolveNode = (node) => {
+        // Generate comprehensive report for the entire node
+        const rd = calculateNodeRisk(node, events);
+        const fullAnalysis = generatePredictions(node, rd, events, nodes, routes, staticOrders);
+        const reportId = generateReport({
+            type: 'suggestion',
+            details: {
+                title: `Node Resolved: ${node.name}`,
+                type: 'resolution',
+                description: fullAnalysis.summary + ' | Recommendation: ' + fullAnalysis.recommendation,
+                impact: rd.score >= 50 ? 'High' : 'Medium',
+                priority: 'completed',
+            },
+            node,
+            timestamp: Date.now(),
+        });
+        setResolvedNodes(prev => ({ ...prev, [node.id]: { timestamp: Date.now(), reportId } }));
+        toast.success(`✅ ${node.name} marked as resolved! Report downloaded.`);
+        // Select next active node
+        const remaining = activeNodes.filter(n => n.id !== node.id);
+        if (remaining.length > 0) handleSelectNode(remaining[0]);
+    };
+
     if (!nodes || nodes.length === 0) {
         return <div style={{ padding: '32px', color: t.textMuted }}>No nodes. Seed database via Settings.</div>;
     }
@@ -58,8 +85,7 @@ export default function PredictionsDashboard() {
         <button onClick={onClick} disabled={isAccepted} style={{
             display: 'flex', alignItems: 'center', gap: '6px',
             padding: '8px 16px', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: isAccepted ? 'default' : 'pointer', border: 'none',
-            background: isAccepted ? t.successBg : t.primary,
-            color: isAccepted ? t.success : '#fff',
+            background: isAccepted ? t.successBg : t.primary, color: isAccepted ? t.success : '#fff',
             ...(isAccepted ? { border: `1px solid ${t.successBorder}` } : {}),
         }}>
             <span className="material-icons-outlined" style={{ fontSize: '16px' }}>{isAccepted ? 'check_circle' : 'task_alt'}</span>
@@ -69,32 +95,86 @@ export default function PredictionsDashboard() {
 
     return (
         <div style={{ display: 'flex', height: '100%', background: t.bg, color: t.text, overflow: 'hidden' }}>
-            {/* Node List */}
-            <div style={{ width: '260px', minWidth: '260px', borderRight: `1px solid ${t.border}`, background: t.bgCard, display: 'flex', flexDirection: 'column', height: '100%' }}>
+            {/* Sidebar: Active + Resolved */}
+            <div style={{ width: '270px', minWidth: '270px', borderRight: `1px solid ${t.border}`, background: t.bgCard, display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <div style={{ padding: '20px', borderBottom: `1px solid ${t.border}` }}>
                     <h2 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: t.heading, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span className="material-icons-outlined" style={{ color: t.primary }}>hub</span> Nodes
+                        <span className="material-icons-outlined" style={{ color: t.primary }}>hub</span> Supply Chain
                     </h2>
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                        <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '6px', background: t.warningBg, color: t.warning, fontWeight: 700 }}>{activeNodes.length} Active</span>
+                        <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '6px', background: t.successBg, color: t.success, fontWeight: 700 }}>{resolvedList.length} Resolved</span>
+                    </div>
                 </div>
-                <div style={{ flex: 1, overflowY: 'auto', padding: '10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {sortedNodes.map(node => {
-                        const active = selectedNode?.id === node.id;
-                        const col = node.riskScore >= 70 ? t.danger : node.riskScore >= 35 ? t.warning : t.success;
-                        return (
-                            <div key={node.id} onClick={() => handleSelectNode(node)}
-                                style={{ padding: '12px', borderRadius: '10px', cursor: 'pointer', border: active ? `1px solid ${t.primaryBorder}` : '1px solid transparent', background: active ? t.primaryBg : 'transparent' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                    <span style={{ fontSize: '13px', fontWeight: 600, color: active ? t.heading : t.textSecondary }}>{node.name}</span>
-                                    <span style={{ fontSize: '10px', fontWeight: 800, padding: '2px 6px', borderRadius: '6px', background: `${col}15`, color: col }}>{node.riskScore}</span>
-                                </div>
-                                <span style={{ fontSize: '11px', color: t.textMuted }}>{node.type} • {node.region}</span>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '10px' }}>
+                    {/* Active Nodes */}
+                    {activeNodes.length > 0 && (
+                        <>
+                            <div style={{ fontSize: '10px', fontWeight: 800, color: t.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', padding: '8px 12px 4px' }}>⚠️ Active Issues ({activeNodes.length})</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '16px' }}>
+                                {activeNodes.map(node => {
+                                    const active = selectedNode?.id === node.id;
+                                    const col = node.riskScore >= 70 ? t.danger : node.riskScore >= 35 ? t.warning : t.success;
+                                    return (
+                                        <div key={node.id} style={{ borderRadius: '10px', border: active ? `1px solid ${t.primaryBorder}` : '1px solid transparent', background: active ? t.primaryBg : 'transparent' }}>
+                                            <div onClick={() => handleSelectNode(node)} style={{ padding: '10px 12px', cursor: 'pointer' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                                    <span style={{ fontSize: '13px', fontWeight: 600, color: active ? t.heading : t.textSecondary }}>{node.name}</span>
+                                                    <span style={{ fontSize: '10px', fontWeight: 800, padding: '2px 6px', borderRadius: '6px', background: `${col}15`, color: col }}>{node.riskScore}</span>
+                                                </div>
+                                                <span style={{ fontSize: '11px', color: t.textMuted }}>{node.type} • {node.region}</span>
+                                            </div>
+                                            {/* Resolve button */}
+                                            <div style={{ padding: '0 12px 10px' }}>
+                                                <button onClick={(e) => { e.stopPropagation(); handleResolveNode(node); }}
+                                                    style={{ width: '100%', padding: '6px', borderRadius: '8px', fontSize: '11px', fontWeight: 700, border: `1px solid ${t.successBorder}`, background: t.successBg, color: t.success, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                                                    <span className="material-icons-outlined" style={{ fontSize: '14px' }}>check_circle</span>
+                                                    Resolve & Download
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
-                        );
-                    })}
+                        </>
+                    )}
+
+                    {/* Resolved Nodes */}
+                    {resolvedList.length > 0 && (
+                        <>
+                            <div style={{ fontSize: '10px', fontWeight: 800, color: t.success, textTransform: 'uppercase', letterSpacing: '0.05em', padding: '8px 12px 4px' }}>✅ Resolved ({resolvedList.length})</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                {resolvedList.map(node => {
+                                    const active = selectedNode?.id === node.id;
+                                    const info = resolvedNodes[node.id];
+                                    return (
+                                        <div key={node.id} onClick={() => handleSelectNode(node)}
+                                            style={{ padding: '10px 12px', borderRadius: '10px', cursor: 'pointer', opacity: 0.75, border: active ? `1px solid ${t.successBorder}` : '1px solid transparent', background: active ? t.successBg : 'transparent' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                                <span style={{ fontSize: '13px', fontWeight: 600, color: t.textSecondary, textDecoration: 'line-through' }}>{node.name}</span>
+                                                <span style={{ fontSize: '10px', fontWeight: 800, padding: '2px 6px', borderRadius: '6px', background: t.successBg, color: t.success }}>✓</span>
+                                            </div>
+                                            <span style={{ fontSize: '11px', color: t.textMuted }}>
+                                                Resolved {new Date(info.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </>
+                    )}
+
+                    {activeNodes.length === 0 && resolvedList.length > 0 && (
+                        <div style={{ textAlign: 'center', padding: '24px 16px', marginTop: '16px' }}>
+                            <span className="material-icons-outlined" style={{ fontSize: '40px', color: t.success, display: 'block', marginBottom: '8px' }}>verified</span>
+                            <p style={{ fontSize: '14px', fontWeight: 700, color: t.success }}>All Issues Resolved!</p>
+                            <p style={{ fontSize: '12px', color: t.textMuted }}>All nodes have been reviewed and resolved.</p>
+                        </div>
+                    )}
                 </div>
             </div>
 
-            {/* Analysis */}
+            {/* Analysis Panel */}
             <div style={{ flex: 1, padding: '28px', overflowY: 'auto' }}>
                 {!selectedNode || !analysis ? (
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: t.textMuted }}>
@@ -102,6 +182,17 @@ export default function PredictionsDashboard() {
                     </div>
                 ) : (
                     <div style={{ maxWidth: '860px', margin: '0 auto' }}>
+                        {/* Resolved banner */}
+                        {resolvedNodes[selectedNode.id] && (
+                            <div style={{ background: t.successBg, border: `1px solid ${t.successBorder}`, borderRadius: '12px', padding: '14px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <span className="material-icons-outlined" style={{ color: t.success, fontSize: '22px' }}>verified</span>
+                                <div>
+                                    <div style={{ fontSize: '14px', fontWeight: 700, color: t.success }}>This node has been resolved</div>
+                                    <div style={{ fontSize: '12px', color: t.textMuted }}>Report #{resolvedNodes[selectedNode.id].reportId} • {new Date(resolvedNodes[selectedNode.id].timestamp).toLocaleString()}</div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Header */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
                             <div>
@@ -163,7 +254,7 @@ export default function PredictionsDashboard() {
                             </div>
                         )}
 
-                        {/* ORDERS — with Accept buttons */}
+                        {/* ORDERS */}
                         {activeTab === 'orders' && (
                             <div>
                                 {(analysis.orderPredictions || []).length === 0 ? (
@@ -175,7 +266,7 @@ export default function PredictionsDashboard() {
                                     const key = `order-${o.orderId}-${selectedNode.id}`;
                                     const isAccepted = !!accepted[key];
                                     return (
-                                        <div key={i} style={{ background: t.bgCard, border: `1px solid ${isAccepted ? t.successBorder : t.border}`, borderRadius: '14px', marginBottom: '14px', overflow: 'hidden', ...(isAccepted ? { opacity: 0.85 } : {}) }}>
+                                        <div key={i} style={{ background: t.bgCard, border: `1px solid ${isAccepted ? t.successBorder : t.border}`, borderRadius: '14px', marginBottom: '14px', overflow: 'hidden' }}>
                                             <div style={{ padding: '18px 20px', borderBottom: `1px solid ${t.border}` }}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                                                     <div>
@@ -200,7 +291,6 @@ export default function PredictionsDashboard() {
                                                     <div style={{ fontSize: '13px', color: t.text, lineHeight: 1.4 }}>{o.suggestion}</div>
                                                 </div>
                                             </div>
-                                            {/* Accept button */}
                                             <div style={{ padding: '14px 20px', borderTop: `1px solid ${t.border}`, display: 'flex', justifyContent: 'flex-end' }}>
                                                 {acceptBtn(() => handleAccept('order', o, key), isAccepted)}
                                             </div>
@@ -210,7 +300,7 @@ export default function PredictionsDashboard() {
                             </div>
                         )}
 
-                        {/* ROUTES — with Accept buttons */}
+                        {/* ROUTES */}
                         {activeTab === 'routes' && (
                             <div>
                                 {(analysis.routeOptimizations || []).length === 0 ? (
@@ -222,7 +312,7 @@ export default function PredictionsDashboard() {
                                     const key = `route-${i}-${selectedNode.id}`;
                                     const isAccepted = !!accepted[key];
                                     return (
-                                        <div key={i} style={{ background: t.bgCard, border: `1px solid ${isAccepted ? t.successBorder : t.infoBorder}`, borderRadius: '14px', padding: '22px', marginBottom: '14px', ...(isAccepted ? { opacity: 0.85 } : {}) }}>
+                                        <div key={i} style={{ background: t.bgCard, border: `1px solid ${isAccepted ? t.successBorder : t.infoBorder}`, borderRadius: '14px', padding: '22px', marginBottom: '14px' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '14px' }}>
                                                 <h4 style={{ fontSize: '14px', fontWeight: 700, color: t.heading, margin: 0 }}>Optimization #{i + 1}</h4>
                                                 <span style={{ fontSize: '12px', fontWeight: 700, color: r.confidence > 80 ? t.success : t.warning }}>{r.confidence}%</span>
@@ -252,7 +342,6 @@ export default function PredictionsDashboard() {
                                                     <div style={{ fontSize: '12px', color: t.text, lineHeight: 1.4 }}>{r.reason}</div>
                                                 </div>
                                             </div>
-                                            {/* Accept button */}
                                             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                                                 {acceptBtn(() => handleAccept('route', r, key), isAccepted)}
                                             </div>
@@ -262,14 +351,14 @@ export default function PredictionsDashboard() {
                             </div>
                         )}
 
-                        {/* ACTIONS — with Accept buttons */}
+                        {/* ACTIONS */}
                         {activeTab === 'suggestions' && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                 {(analysis.proactiveSuggestions || []).map((s, i) => {
                                     const key = `sug-${i}-${selectedNode.id}`;
                                     const isAccepted = !!accepted[key];
                                     return (
-                                        <div key={i} style={{ background: t.bgCard, border: `1px solid ${isAccepted ? t.successBorder : t.border}`, borderRadius: '12px', padding: '18px', ...(isAccepted ? { opacity: 0.85 } : {}) }}>
+                                        <div key={i} style={{ background: t.bgCard, border: `1px solid ${isAccepted ? t.successBorder : t.border}`, borderRadius: '12px', padding: '18px' }}>
                                             <div style={{ display: 'flex', gap: '14px' }}>
                                                 <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: `${pc(s.priority)}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                                     <span className="material-icons-outlined" style={{ fontSize: '18px', color: pc(s.priority) }}>{ti(s.type)}</span>
