@@ -1,23 +1,23 @@
 'use client';
-
-import React from 'react';
+import AuthGuard from '@/components/AuthGuard';
 import Sidebar from '@/components/Sidebar';
 import TopBar from '@/components/TopBar';
-import AuthGuard from '@/components/AuthGuard';
 import AlertsFeed from '@/components/AlertsFeed';
+import VoiceAssistant from '@/components/VoiceAssistant';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function AlertsPage() {
+    const { theme: t } = useTheme();
     return (
         <AuthGuard>
             {(user) => (
-                <div style={{ display: 'flex', minHeight: '100vh', background: '#070b14' }}>
+                <div style={{ display: 'flex', minHeight: '100vh', background: t.bg, color: t.text }}>
                     <Sidebar />
-                    <div style={{ marginLeft: '240px', flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
-                        <TopBar user={user} />
-                        <main style={{ flex: 1, padding: 0, position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#070b14' }}>
-                            <AlertsFeed user={user} />
-                        </main>
-                    </div>
+                    <main style={{ flex: 1, padding: '32px', overflowY: 'auto', height: '100vh' }}>
+                        <TopBar user={user} title="Alerts" subtitle="Real-time supply chain disruption alerts" />
+                        <AlertsFeed user={user} />
+                    </main>
+                    <VoiceAssistant />
                 </div>
             )}
         </AuthGuard>

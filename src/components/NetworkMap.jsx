@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { ComposableMap, Geographies, Geography, Marker, Line, ZoomableGroup } from 'react-simple-maps';
 import { useData } from '@/contexts/DataContext';
 import { calculateNodeRisk } from '@/services/riskEngine';
-import { AlertTriangle, Info, MapPin } from 'lucide-react';
 
 const geoUrl = "https://unpkg.com/world-atlas@2.0.2/countries-110m.json";
 
@@ -15,8 +14,11 @@ export default function NetworkMap() {
 
     if (!nodes || nodes.length === 0) {
         return (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#64748b' }}>
-                <p>No map data available. Please seed the database in Settings.</p>
+            <div className="flex items-center justify-center h-full w-full text-gray-500 bg-card-dark/30 rounded-2xl border border-border-dark border-dashed">
+                <div className="text-center">
+                    <span className="material-icons-outlined text-4xl opacity-50 mb-3 block">public_off</span>
+                    <p className="text-sm font-medium">No map data available. Please seed the database in Settings.</p>
+                </div>
             </div>
         );
     }
@@ -41,31 +43,34 @@ export default function NetworkMap() {
     };
 
     function getRiskColor(score) {
-        if (score >= 70) return '#ef4444'; // Red
-        if (score >= 35) return '#f59e0b'; // Orange
-        return '#10b981'; // Green
+        if (score >= 70) return '#ef4444'; // var(--color-danger)
+        if (score >= 35) return '#f59e0b'; // var(--color-warning)
+        return '#10b981'; // var(--color-success)
     }
 
     return (
-        <div style={{ width: '100%', height: '100%', position: 'relative', overflow: 'hidden' }}>
+        <div className="w-full h-full relative overflow-hidden rounded-2xl bg-[#0f111a]">
+            {/* Background elements to make it feel more "dashboardy" */}
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-primary/5 via-background-dark to-background-dark pointer-events-none"></div>
+
             <ComposableMap
                 projection="geoMercator"
                 projectionConfig={{ scale: 140 }}
-                style={{ width: "100%", height: "100%", outline: 'none' }}
+                className="w-full h-full outline-none"
             >
-                <ZoomableGroup center={[0, 20]}>
+                <ZoomableGroup center={[0, 20]} maxZoom={5}>
                     <Geographies geography={geoUrl}>
                         {({ geographies }) =>
                             geographies.map((geo) => (
                                 <Geography
                                     key={geo.rsmKey}
                                     geography={geo}
-                                    fill="#1e293b" // Dark land
-                                    stroke="#334155" // Borders
+                                    fill="#1a1c29" // Slightly brighter than background
+                                    stroke="#2d3042" // Border dark
                                     strokeWidth={0.5}
                                     style={{
                                         default: { outline: 'none' },
-                                        hover: { outline: 'none', fill: '#334155' },
+                                        hover: { outline: 'none', fill: '#2d3042', transition: 'all 0.3s ease' },
                                         pressed: { outline: 'none' },
                                     }}
                                 />
@@ -81,7 +86,7 @@ export default function NetworkMap() {
                         if (!startNode || !endNode) return null;
 
                         const isVulnerable = route.vulnerabilityScore > 60;
-                        const lineColor = isVulnerable ? 'rgba(239, 68, 68, 0.5)' : 'rgba(148, 163, 184, 0.4)';
+                        const lineColor = isVulnerable ? 'rgba(239, 68, 68, 0.6)' : 'rgba(99, 102, 241, 0.3)';
                         const strokeDasharray = isVulnerable ? "4 4" : "none";
 
                         return (
@@ -93,9 +98,7 @@ export default function NetworkMap() {
                                 strokeWidth={isVulnerable ? 2 : 1}
                                 strokeDasharray={strokeDasharray}
                                 strokeLinecap="round"
-                                style={{
-                                    transition: 'all 0.3s ease'
-                                }}
+                                style={{ transition: 'all 0.3s ease' }}
                             />
                         );
                     })}
@@ -113,9 +116,21 @@ export default function NetworkMap() {
                                 onMouseEnter={(e) => handleMouseEnter(node, e)}
                                 onMouseLeave={handleMouseLeave}
                             >
-                                <circle r={isAlert ? 6 : 4} fill={color} stroke="#070b14" strokeWidth={1} style={{ cursor: 'pointer', transition: 'all 0.3s ease' }} />
+                                <circle
+                                    r={isAlert ? 6 : 4}
+                                    fill={color}
+                                    stroke="#0f111a"
+                                    strokeWidth={1.5}
+                                    className="cursor-pointer transition-all duration-300 hover:scale-150 origin-center"
+                                />
                                 {isAlert && (
-                                    <circle r={12} fill="transparent" stroke={color} strokeWidth={1} style={{ animation: 'ping 2s cubic-bezier(0, 0, 0.2, 1) infinite', pointerEvents: 'none', opacity: 0.5 }} />
+                                    <circle
+                                        r={14}
+                                        fill="transparent"
+                                        stroke={color}
+                                        strokeWidth={1}
+                                        className="animate-ping pointer-events-none opacity-50 origin-center"
+                                    />
                                 )}
                             </Marker>
                         );
@@ -123,64 +138,45 @@ export default function NetworkMap() {
                 </ZoomableGroup>
             </ComposableMap>
 
-            {/* Float Tooltip */}
+            {/* Float Tooltip - Glassmorphism */}
             {tooltipData && (
-                <div style={{
-                    position: 'fixed',
-                    left: `${tooltipPos.x}px`,
-                    top: `${tooltipPos.y}px`,
-                    transform: 'translate(-50%, -100%)',
-                    background: 'rgba(15, 23, 42, 0.95)',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    padding: '12px 16px',
-                    borderRadius: '8px',
-                    color: '#fff',
-                    pointerEvents: 'none',
-                    zIndex: 100,
-                    minWidth: '200px',
-                    boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
-                    transition: 'opacity 0.1s ease',
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                        <span style={{ fontWeight: 700, fontSize: '13px' }}>{tooltipData.name}</span>
-                        <div style={{
-                            display: 'flex', alignItems: 'center', gap: '4px',
-                            padding: '2px 6px', borderRadius: '4px',
-                            background: tooltipData.riskScore >= 70 ? 'rgba(239, 68, 68, 0.2)' : (tooltipData.riskScore >= 35 ? 'rgba(245, 158, 11, 0.2)' : 'rgba(16, 185, 129, 0.2)'),
-                            color: tooltipData.riskScore >= 70 ? '#ef4444' : (tooltipData.riskScore >= 35 ? '#fbbf24' : '#10b981'),
-                            fontSize: '10px', fontWeight: 700, textTransform: 'uppercase'
-                        }}>
-                            {tooltipData.riskScore >= 70 ? <AlertTriangle size={10} /> : <Info size={10} />}
-                            {tooltipData.riskCategory}
+                <div
+                    className="fixed z-50 pointer-events-none transform -translate-x-1/2 -translate-y-[calc(100%+10px)]"
+                    style={{ left: `${tooltipPos.x}px`, top: `${tooltipPos.y}px` }}
+                >
+                    <div className="bg-card-dark/95 backdrop-blur-xl border border-white/10 p-3.5 rounded-xl shadow-[0_15px_35px_rgba(0,0,0,0.6)] min-w-[220px] text-white">
+                        <div className="flex items-center justify-between mb-2 pb-2 border-b border-white/5">
+                            <span className="font-bold text-sm tracking-tight">{tooltipData.name}</span>
+                            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wider ${tooltipData.riskScore >= 70 ? 'bg-danger/20 text-danger border border-danger/20' :
+                                    tooltipData.riskScore >= 35 ? 'bg-warning/20 text-warning border border-warning/20' :
+                                        'bg-success/20 text-success border border-success/20'
+                                }`}>
+                                <span className="material-icons-outlined text-[12px]">
+                                    {tooltipData.riskScore >= 70 ? 'warning' : 'info'}
+                                </span>
+                                {tooltipData.riskCategory}
+                            </div>
                         </div>
-                    </div>
 
-                    <div style={{ fontSize: '11px', color: '#94a3b8', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <MapPin size={12} color="#cbd5e1" />
-                            <span>{tooltipData.region}, {tooltipData.country}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '6px' }}>
-                            <span>Type:</span>
-                            <span style={{ color: '#e2e8f0', textTransform: 'capitalize' }}>{tooltipData.type}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>Live Risk Index:</span>
-                            <span style={{ color: '#e2e8f0', fontWeight: 600 }}>{tooltipData.riskScore}/100</span>
+                        <div className="flex flex-col gap-1.5 text-xs text-gray-400 font-medium">
+                            <div className="flex items-center gap-2">
+                                <span className="material-icons-outlined text-[14px] text-gray-500">location_on</span>
+                                <span className="truncate">{tooltipData.region}, {tooltipData.country}</span>
+                            </div>
+                            <div className="flex justify-between items-center bg-white/5 px-2 py-1 rounded-md mt-1">
+                                <span>Type:</span>
+                                <span className="text-gray-200 capitalize font-bold">{tooltipData.type}</span>
+                            </div>
+                            <div className="flex justify-between items-center bg-white/5 px-2 py-1 rounded-md">
+                                <span>Live Risk Index:</span>
+                                <span className="text-white font-black">{tooltipData.riskScore}/100</span>
+                            </div>
                         </div>
                     </div>
+                    {/* Tooltip triangle pointer */}
+                    <div className="absolute left-1/2 bottom-0 transform -translate-x-1/2 translate-y-full w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-white/10"></div>
                 </div>
             )}
-
-            <style jsx global>{`
-                @keyframes ping {
-                    75%, 100% {
-                        transform: scale(2.5);
-                        opacity: 0;
-                    }
-                }
-            `}</style>
         </div>
     );
 }

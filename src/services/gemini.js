@@ -153,6 +153,87 @@ Respond conversationally, like a supply chain expert briefing a manager.`;
     return await callGemini(prompt);
 }
 
+/**
+ * Comprehensive supply chain prediction: orders, delays, route optimization, proactive suggestions
+ */
+export async function predictSupplyChain(node, riskData, activeEvents, allNodes, routes, orders) {
+    const nodeOrders = (orders || []).filter(o => o.route?.includes(node.id) || o.origin === node.id || o.destination === node.id || o.currentLocation === node.id);
+    const orderSummary = nodeOrders.length > 0
+        ? nodeOrders.map(o => `- ${o.name} (${o.id}): ${o.status}, ${o.delayDays}d delay, Value: ${o.value}, Progress: ${o.progress}%, Route: ${o.route?.join(' → ')}`).join('\n')
+        : '- No active orders through this node';
+
+    const eventList = activeEvents
+        .filter(e => e.affectedNodes?.includes(node.id))
+        .map(e => `- ${e.type.toUpperCase()}: ${e.title} (severity: ${e.severity})`)
+        .join('\n') || '- No active events';
+
+    const connectedRoutes = (routes || []).filter(r => r.from === node.id || r.to === node.id);
+    const routeInfo = connectedRoutes.length > 0
+        ? connectedRoutes.map(r => {
+            const other = r.from === node.id ? r.to : r.from;
+            const otherNode = allNodes.find(n => n.id === other);
+            return `- Route to ${otherNode?.name || other} (${r.mode || 'sea'}, ${r.distance || '?'}km, ${r.transitDays || '?'} days)`;
+        }).join('\n')
+        : '- No direct routes';
+
+    const nearbyAlternatives = allNodes
+        .filter(n => n.id !== node.id && n.region === node.region && n.type === node.type)
+        .sort((a, b) => b.reliability - a.reliability)
+        .slice(0, 4)
+        .map(n => `- ${n.name} (${n.country}, reliability: ${n.reliability}%)`)
+        .join('\n') || '- No regional alternatives';
+
+    const prompt = `You are an advanced AI supply chain intelligence system. Provide comprehensive analysis for this node — NOT just disaster prediction, but full supply chain optimization including order tracking, delay predictions, route optimization, and proactive efficiency suggestions.
+
+NODE: ${node.name} (${node.type}) in ${node.country}, ${node.region}
+Risk Score: ${riskData.score}/100 (${riskData.category})
+Reliability: ${node.reliability}%
+
+ACTIVE ORDERS THROUGH THIS NODE:
+${orderSummary}
+
+ACTIVE DISRUPTION EVENTS:
+${eventList}
+
+CONNECTED ROUTES:
+${routeInfo}
+
+REGIONAL ALTERNATIVES:
+${nearbyAlternatives}
+
+Provide a COMPREHENSIVE analysis in JSON format. Focus on:
+1. Overall supply chain health (not just disasters)
+2. Order delay predictions with specific reasons
+3. Better/faster route suggestions
+4. Cost optimization opportunities
+5. Proactive efficiency improvements
+
+Return JSON:
+{
+  "healthScore": 75,
+  "healthStatus": "Moderate — some delays but manageable",
+  "summary": "Comprehensive 2-3 sentence overview of node performance, efficiency, and outlook",
+  "orderPredictions": [
+    { "orderId": "ORD-XXX", "orderName": "Name", "currentDelay": "3 days", "predictedDelay": "5 days", "reason": "Why delayed", "suggestion": "How to speed up", "impact": "High/Medium/Low" }
+  ],
+  "routeOptimizations": [
+    { "currentRoute": "A → B → C", "suggestedRoute": "A → D → C", "timeSaved": "2 days", "costDelta": "+5%", "reason": "Why this route is better", "confidence": 85 }
+  ],
+  "proactiveSuggestions": [
+    { "type": "efficiency/cost/speed/risk", "title": "Short action title", "description": "What to do and why", "impact": "High/Medium/Low", "priority": "immediate/short-term/long-term" }
+  ],
+  "predictions": [
+    { "timeframe": "Next 24-48 hours", "prediction": "What will happen", "confidence": 85, "impact": "High/Medium/Low" },
+    { "timeframe": "Next 7 days", "prediction": "What will happen", "confidence": 70, "impact": "Medium" },
+    { "timeframe": "Next 30 days", "prediction": "Outlook", "confidence": 55, "impact": "Low" }
+  ],
+  "recommendation": "Primary action to take right now"
+}`;
+
+    const text = await callGemini(prompt);
+    return parseJsonResponse(text);
+}
+
 function parseJsonResponse(text) {
     try {
         const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -164,27 +245,55 @@ function parseJsonResponse(text) {
 }
 
 function getMockResponse(prompt) {
-    if (prompt.includes('predictions')) {
+    if (prompt.includes('Comprehensive') || prompt.includes('supply chain intelligence')) {
+        return JSON.stringify({
+            healthScore: 72,
+            healthStatus: 'Moderate — active delays on 2 orders, routes performing at 85% efficiency',
+            summary: 'This node is operating at moderate efficiency with 2 active orders experiencing delays averaging 5 days. Current congestion events are impacting throughput, but alternative routing through regional hubs could reduce delays by 40%. Proactive inventory repositioning is recommended.',
+            orderPredictions: [
+                { orderId: 'ORD-2024-001', orderName: 'Semiconductor Batch Alpha', currentDelay: '3 days', predictedDelay: '5 days', reason: 'Port congestion at intermediate hub combined with seasonal weather patterns', suggestion: 'Reroute through Dubai Logistics to bypass congestion — saves 2 days', impact: 'High' },
+                { orderId: 'ORD-2024-003', orderName: 'Textile Shipment Bravo', currentDelay: '10 days', predictedDelay: '12 days', reason: 'Customs clearance delays compounded by regional strike action at origin', suggestion: 'Pre-clear documentation digitally and request priority handling at destination port', impact: 'High' },
+            ],
+            routeOptimizations: [
+                { currentRoute: 'Shanghai → Singapore → Dubai → Rotterdam → New York', suggestedRoute: 'Shanghai → Singapore → Suez Canal → Rotterdam → New York', timeSaved: '3 days', costDelta: '-2%', reason: 'Direct Suez routing eliminates Dubai transshipment delay and reduces fuel costs', confidence: 88 },
+                { currentRoute: 'Mumbai → Chennai → Dubai', suggestedRoute: 'Mumbai → Jeddah → Dubai', timeSaved: '1 day', costDelta: '+4%', reason: 'Jeddah port has 15% less congestion this month and faster customs processing', confidence: 76 },
+            ],
+            proactiveSuggestions: [
+                { type: 'efficiency', title: 'Consolidate Shipments at Singapore Hub', description: 'Merging 3 small shipments into 1 container reduces transit costs by 18% and simplifies tracking. Schedule weekly consolidation window.', impact: 'High', priority: 'immediate' },
+                { type: 'cost', title: 'Negotiate Bulk Rate with Rotterdam', description: 'Current volume qualifies for tier-2 pricing. Switching to quarterly contracts saves ~$45K/quarter on port handling fees.', impact: 'Medium', priority: 'short-term' },
+                { type: 'speed', title: 'Pre-Position Safety Stock at Dubai', description: 'Keeping 2-week buffer inventory at Dubai warehouse reduces emergency airfreight costs by 60% during disruptions.', impact: 'High', priority: 'short-term' },
+                { type: 'risk', title: 'Diversify Supplier Base in Southeast Asia', description: 'Over-reliance on single-region suppliers increases vulnerability. Onboard 1-2 backup suppliers in Vietnam or Thailand.', impact: 'Medium', priority: 'long-term' },
+            ],
+            predictions: [
+                { timeframe: 'Next 24-48 hours', prediction: 'Port congestion easing slightly. Semiconductor order to clear Singapore by tomorrow. Textile shipment remains held at customs.', confidence: 87, impact: 'Medium' },
+                { timeframe: 'Next 7 days', prediction: 'Overall throughput should improve 15% as weather patterns normalize. Recommend activating backup routing for any new high-priority orders.', confidence: 72, impact: 'Medium' },
+                { timeframe: 'Next 30 days', prediction: 'Seasonal demand increase expected. Pre-position inventory at key hubs and confirm carrier capacity agreements to avoid spot market premiums.', confidence: 58, impact: 'Low' },
+            ],
+            recommendation: 'Immediately reroute ORD-2024-001 through Dubai bypass and pre-clear customs docs for ORD-2024-003 to reduce combined delays by 5 days.',
+        });
+    }
+    if (prompt.includes('predictions') || prompt.includes('predict disruptions')) {
         return JSON.stringify({
             summary: 'Multiple disruption factors are converging on this node, requiring immediate attention.',
             predictions: [
-                { timeframe: 'Next 24-48 hours', prediction: 'Delays of 12-18 hours expected due to ongoing weather and congestion events. Monitor closely for escalation.', confidence: 87, impact: 'High' },
-                { timeframe: 'Next 7 days', prediction: 'Risk level likely to remain elevated. Recommend activating backup supplier agreements as precaution.', confidence: 72, impact: 'Medium' },
-                { timeframe: 'Next 30 days', prediction: 'Situation expected to normalize as seasonal weather patterns improve and strikes are resolved.', confidence: 58, impact: 'Low' },
+                { timeframe: 'Next 24-48 hours', prediction: 'Delays of 12-18 hours expected due to ongoing weather and congestion events.', confidence: 87, impact: 'High' },
+                { timeframe: 'Next 7 days', prediction: 'Risk level likely to remain elevated. Recommend activating backup supplier agreements.', confidence: 72, impact: 'Medium' },
+                { timeframe: 'Next 30 days', prediction: 'Situation expected to normalize as seasonal weather patterns improve.', confidence: 58, impact: 'Low' },
             ],
-            recommendation: 'Activate contingency routing through Singapore Hub and pre-position inventory at Dubai warehouse.',
+            recommendation: 'Activate contingency routing through Singapore Hub.',
             estimatedDelay: '2-5 days',
         });
     }
     if (prompt.includes('alternatives')) {
         return JSON.stringify({
             alternatives: [
-                { name: 'Singapore Hub', country: 'Singapore', reason: 'Highest reliability in region (95%), low current disruption events', estimatedCostIncrease: '+8%', estimatedTimeIncrease: '+2 days', safetyScore: 92 },
-                { name: 'Dubai Logistics', country: 'UAE', reason: 'Strong reliability (91%) with excellent Middle East connectivity', estimatedCostIncrease: '+15%', estimatedTimeIncrease: '+4 days', safetyScore: 86 },
-                { name: 'Rotterdam Hub', country: 'Netherlands', reason: 'Europe\'s premier logistics hub with 96% reliability', estimatedCostIncrease: '+22%', estimatedTimeIncrease: '+6 days', safetyScore: 94 },
+                { name: 'Singapore Hub', country: 'Singapore', reason: 'Highest reliability in region (95%)', estimatedCostIncrease: '+8%', estimatedTimeIncrease: '+2 days', safetyScore: 92 },
+                { name: 'Dubai Logistics', country: 'UAE', reason: 'Strong reliability (91%) with excellent connectivity', estimatedCostIncrease: '+15%', estimatedTimeIncrease: '+4 days', safetyScore: 86 },
+                { name: 'Rotterdam Hub', country: 'Netherlands', reason: "Europe's premier logistics hub with 96% reliability", estimatedCostIncrease: '+22%', estimatedTimeIncrease: '+6 days', safetyScore: 94 },
             ],
-            recommendation: 'Redirect 70% of volume through Singapore Hub immediately, maintain 30% on primary route.',
+            recommendation: 'Redirect 70% of volume through Singapore Hub immediately.',
         });
     }
-    return 'Your supply chain network currently shows 3 high-risk nodes requiring immediate attention. I recommend activating backup supplier agreements for Shanghai and Tokyo while the typhoon and earthquake situations are resolved. Overall network resilience remains at moderate levels.';
+    return 'Your supply chain network currently shows 3 high-risk nodes requiring attention. I recommend checking your order delays and activating backup routing for priority shipments.';
 }
+

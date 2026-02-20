@@ -1,23 +1,27 @@
 'use client';
-
-import React from 'react';
+import AuthGuard from '@/components/AuthGuard';
 import Sidebar from '@/components/Sidebar';
 import TopBar from '@/components/TopBar';
-import AuthGuard from '@/components/AuthGuard';
 import PredictionsDashboard from '@/components/PredictionsDashboard';
+import VoiceAssistant from '@/components/VoiceAssistant';
+import { useTheme } from '@/contexts/ThemeContext';
 
 export default function PredictionsPage() {
+    const { theme: t } = useTheme();
     return (
         <AuthGuard>
             {(user) => (
-                <div style={{ display: 'flex', minHeight: '100vh', background: '#070b14' }}>
+                <div style={{ display: 'flex', minHeight: '100vh', background: t.bg, color: t.text }}>
                     <Sidebar />
-                    <div style={{ marginLeft: '240px', flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
-                        <TopBar user={user} />
-                        <main style={{ flex: 1, padding: 0, position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh' }}>
+                        <div style={{ padding: '32px 32px 0' }}>
+                            <TopBar user={user} title="AI Predictions" subtitle="Per-node analysis, order delays, route optimization" />
+                        </div>
+                        <div style={{ flex: 1, overflow: 'hidden' }}>
                             <PredictionsDashboard />
-                        </main>
+                        </div>
                     </div>
+                    <VoiceAssistant />
                 </div>
             )}
         </AuthGuard>

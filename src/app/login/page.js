@@ -1,186 +1,141 @@
 'use client';
-// src/app/login/page.js
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signInWithGoogle } from '@/services/firebase';
-import { Zap, Globe, TrendingUp, Shield } from 'lucide-react';
+import { signInWithGoogle, signInWithEmail, signUpWithEmail, resetPassword } from '@/services/firebase';
+import { useTheme } from '@/contexts/ThemeContext';
+import toast from 'react-hot-toast';
 
 export default function LoginPage() {
     const router = useRouter();
+    const { theme: t, mode, toggleTheme } = useTheme();
+    const [view, setView] = useState('login'); // login, signup, forgot
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
 
-    const handleGoogleSignIn = async () => {
+    const handleGoogle = async () => {
         setLoading(true);
-        setError('');
-        const { user, error: err } = await signInWithGoogle();
-        if (user) {
+        try {
+            await signInWithGoogle();
             router.push('/dashboard');
-        } else {
-            setError(err || 'Sign-in failed. Please try again.');
-            setLoading(false);
-        }
+        } catch (err) { toast.error(err.message); }
+        finally { setLoading(false); }
     };
 
-    const features = [
-        { icon: Globe, label: 'Real-time global network visibility' },
-        { icon: TrendingUp, label: 'AI-powered disruption predictions' },
-        { icon: Shield, label: 'Risk scoring across 15+ nodes' },
-    ];
+    const handleEmail = async (e) => {
+        e.preventDefault();
+        if (!email || (!password && view !== 'forgot')) { toast.error('Fill all fields'); return; }
+        setLoading(true);
+        try {
+            if (view === 'signup') {
+                await signUpWithEmail(email, password);
+                router.push('/dashboard');
+            } else {
+                await signInWithEmail(email, password);
+                router.push('/dashboard');
+            }
+        } catch (err) { toast.error(err.message); }
+        finally { setLoading(false); }
+    };
+
+    const handleForgot = async (e) => {
+        e.preventDefault();
+        if (!email) { toast.error('Enter your email'); return; }
+        setLoading(true);
+        try {
+            const result = await resetPassword(email);
+            if (result.error) throw new Error(result.error);
+            toast.success('Password reset email sent! Check your inbox.');
+            setView('login');
+        } catch (err) { toast.error(err.message); }
+        finally { setLoading(false); }
+    };
+
+    const inputStyle = { width: '100%', padding: '12px 16px', background: t.bg, border: `1px solid ${t.border}`, borderRadius: '10px', color: t.text, fontSize: '14px', outline: 'none', boxSizing: 'border-box' };
 
     return (
-        <div style={{
-            minHeight: '100vh',
-            display: 'flex',
-            background: '#070b14',
-            position: 'relative',
-            overflow: 'hidden',
-        }}>
-            {/* Animated background blobs */}
-            <div style={{ position: 'absolute', top: '-200px', left: '-200px', width: '600px', height: '600px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(34,211,238,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
-            <div style={{ position: 'absolute', bottom: '-200px', right: '-100px', width: '500px', height: '500px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
+        <div style={{ minHeight: '100vh', background: t.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Inter', sans-serif", padding: '20px' }}>
+            <button onClick={toggleTheme} style={{ position: 'absolute', top: '20px', right: '20px', background: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '10px', padding: '8px 14px', color: t.textSecondary, cursor: 'pointer', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span className="material-icons-outlined" style={{ fontSize: '18px' }}>{mode === 'dark' ? 'light_mode' : 'dark_mode'}</span>
+                {mode === 'dark' ? 'Light' : 'Dark'}
+            </button>
 
-            {/* Left panel — branding */}
-            <div style={{
-                flex: 1,
-                display: 'flex', flexDirection: 'column', justifyContent: 'center',
-                padding: '60px',
-                borderRight: '1px solid rgba(99,179,237,0.08)',
-            }}>
-                {/* Logo */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '48px' }}>
-                    <div style={{
-                        width: '48px', height: '48px',
-                        borderRadius: '14px',
-                        background: 'linear-gradient(135deg, #22d3ee, #8b5cf6)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '0 0 30px rgba(34,211,238,0.4)',
-                    }}>
-                        <Zap size={24} color="#fff" />
+            <div style={{ width: '100%', maxWidth: '420px' }}>
+                <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '8px' }}>
+                        <span className="material-icons-outlined" style={{ fontSize: '32px', color: t.primary }}>security</span>
+                        <h1 style={{ fontSize: '28px', fontWeight: 800, color: t.heading, margin: 0 }}>Vigilance AI</h1>
                     </div>
-                    <div>
-                        <div style={{ fontSize: '22px', fontWeight: 800, color: '#f1f5f9', letterSpacing: '-0.5px' }}>SupplyGuard</div>
-                        <div style={{ fontSize: '11px', color: '#22d3ee', letterSpacing: '2px', textTransform: 'uppercase' }}>AI Platform</div>
-                    </div>
+                    <p style={{ fontSize: '14px', color: t.textMuted }}>Supply Chain Management Platform</p>
                 </div>
 
-                <h1 style={{
-                    fontSize: '42px', fontWeight: 900, lineHeight: 1.1,
-                    background: 'linear-gradient(135deg, #f1f5f9, #94a3b8)',
-                    WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                    marginBottom: '16px',
-                }}>
-                    Predict Disruptions.<br />Before They Strike.
-                </h1>
-                <p style={{ fontSize: '16px', color: '#64748b', lineHeight: 1.7, maxWidth: '400px', marginBottom: '40px' }}>
-                    Monitor global supply chains in real time, get AI-powered risk predictions, and activate smart alternatives instantly.
-                </p>
-
-                {/* Features */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    {features.map(({ icon: Icon, label }) => (
-                        <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <div style={{
-                                width: '32px', height: '32px',
-                                borderRadius: '8px',
-                                background: 'rgba(34,211,238,0.1)',
-                                border: '1px solid rgba(34,211,238,0.2)',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            }}>
-                                <Icon size={14} color="#22d3ee" />
-                            </div>
-                            <span style={{ fontSize: '14px', color: '#94a3b8' }}>{label}</span>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* Right panel — sign in */}
-            <div style={{
-                width: '480px',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                padding: '60px 48px',
-            }}>
-                <div style={{
-                    width: '100%',
-                    background: 'rgba(17,24,39,0.8)',
-                    backdropFilter: 'blur(20px)',
-                    border: '1px solid rgba(99,179,237,0.15)',
-                    borderRadius: '24px',
-                    padding: '40px',
-                }}>
-                    <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#f1f5f9', marginBottom: '8px' }}>
-                        Sign in
+                <div style={{ background: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '16px', padding: '32px' }}>
+                    <h2 style={{ fontSize: '20px', fontWeight: 700, color: t.heading, margin: '0 0 24px', textAlign: 'center' }}>
+                        {view === 'forgot' ? 'Reset Password' : view === 'signup' ? 'Create Account' : 'Sign In'}
                     </h2>
-                    <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '32px' }}>
-                        Access your supply chain dashboard
-                    </p>
 
-                    {/* Network stats teaser */}
-                    <div style={{
-                        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px',
-                        marginBottom: '32px',
-                    }}>
-                        {[
-                            { label: 'Nodes Monitored', value: '15' },
-                            { label: 'Active Alerts', value: '3' },
-                            { label: 'Routes Tracked', value: '18' },
-                            { label: 'High Risk', value: '4' },
-                        ].map(({ label, value }) => (
-                            <div key={label} style={{
-                                padding: '12px',
-                                background: 'rgba(255,255,255,0.03)',
-                                border: '1px solid rgba(255,255,255,0.07)',
-                                borderRadius: '10px',
-                                textAlign: 'center',
-                            }}>
-                                <div style={{ fontSize: '20px', fontWeight: 800, color: '#22d3ee' }}>{value}</div>
-                                <div style={{ fontSize: '11px', color: '#475569', marginTop: '2px' }}>{label}</div>
+                    {/* Forgot Password View */}
+                    {view === 'forgot' ? (
+                        <form onSubmit={handleForgot}>
+                            <p style={{ fontSize: '14px', color: t.textSecondary, marginBottom: '16px', textAlign: 'center' }}>
+                                Enter your email and we'll send you a password reset link.
+                            </p>
+                            <div style={{ marginBottom: '20px' }}>
+                                <label style={{ fontSize: '13px', fontWeight: 600, color: t.textSecondary, display: 'block', marginBottom: '6px' }}>Email</label>
+                                <input type="email" style={inputStyle} value={email} onChange={e => setEmail(e.target.value)} placeholder="you@company.com" />
                             </div>
-                        ))}
-                    </div>
+                            <button type="submit" disabled={loading} style={{ width: '100%', padding: '12px', background: t.primary, color: '#fff', border: 'none', borderRadius: '10px', fontSize: '15px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
+                                {loading ? 'Sending...' : 'Send Reset Link'}
+                            </button>
+                            <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '13px', color: t.textMuted }}>
+                                <button onClick={() => setView('login')} style={{ background: 'none', border: 'none', color: t.primary, fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}>
+                                    ← Back to Sign In
+                                </button>
+                            </p>
+                        </form>
+                    ) : (
+                        /* Login / Signup View */
+                        <>
+                            <form onSubmit={handleEmail}>
+                                <div style={{ marginBottom: '16px' }}>
+                                    <label style={{ fontSize: '13px', fontWeight: 600, color: t.textSecondary, display: 'block', marginBottom: '6px' }}>Email</label>
+                                    <input type="email" style={inputStyle} value={email} onChange={e => setEmail(e.target.value)} placeholder="you@company.com" />
+                                </div>
+                                <div style={{ marginBottom: '8px' }}>
+                                    <label style={{ fontSize: '13px', fontWeight: 600, color: t.textSecondary, display: 'block', marginBottom: '6px' }}>Password</label>
+                                    <input type="password" style={inputStyle} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
+                                </div>
+                                {view === 'login' && (
+                                    <div style={{ textAlign: 'right', marginBottom: '16px' }}>
+                                        <button type="button" onClick={() => setView('forgot')} style={{ background: 'none', border: 'none', color: t.primary, fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+                                            Forgot Password?
+                                        </button>
+                                    </div>
+                                )}
+                                {view === 'signup' && <div style={{ height: '12px' }} />}
+                                <button type="submit" disabled={loading} style={{ width: '100%', padding: '12px', background: t.primary, color: '#fff', border: 'none', borderRadius: '10px', fontSize: '15px', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
+                                    {loading ? 'Please wait...' : view === 'signup' ? 'Sign Up' : 'Sign In'}
+                                </button>
+                            </form>
 
-                    {/* Google Sign In */}
-                    <button
-                        id="google-signin-btn"
-                        onClick={handleGoogleSignIn}
-                        disabled={loading}
-                        style={{
-                            width: '100%',
-                            padding: '14px',
-                            background: loading ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.06)',
-                            border: '1px solid rgba(255,255,255,0.12)',
-                            borderRadius: '12px',
-                            color: '#f1f5f9',
-                            fontSize: '14px',
-                            fontWeight: 600,
-                            cursor: loading ? 'not-allowed' : 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                            transition: 'all 0.2s ease',
-                            opacity: loading ? 0.6 : 1,
-                        }}
-                        onMouseEnter={e => !loading && (e.currentTarget.style.background = 'rgba(255,255,255,0.1)')}
-                        onMouseLeave={e => !loading && (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}>
-                        {!loading && (
-                            <svg width="18" height="18" viewBox="0 0 18 18">
-                                <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" />
-                                <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.836.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" />
-                                <path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.101-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z" />
-                                <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z" />
-                            </svg>
-                        )}
-                        {loading ? 'Signing in...' : 'Continue with Google'}
-                    </button>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '20px 0', color: t.textMuted }}>
+                                <div style={{ flex: 1, height: '1px', background: t.border }} />
+                                <span style={{ fontSize: '12px' }}>or</span>
+                                <div style={{ flex: 1, height: '1px', background: t.border }} />
+                            </div>
 
-                    {error && (
-                        <p style={{ marginTop: '12px', color: '#ef4444', fontSize: '13px', textAlign: 'center' }}>
-                            {error}
-                        </p>
+                            <button onClick={handleGoogle} disabled={loading} style={{ width: '100%', padding: '12px', background: t.bg, border: `1px solid ${t.border}`, borderRadius: '10px', color: t.text, fontSize: '14px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                <span style={{ fontSize: '18px' }}>G</span> Continue with Google
+                            </button>
+
+                            <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '13px', color: t.textMuted }}>
+                                {view === 'signup' ? 'Already have an account?' : "Don't have an account?"}
+                                <button onClick={() => setView(view === 'signup' ? 'login' : 'signup')} style={{ background: 'none', border: 'none', color: t.primary, fontWeight: 600, cursor: 'pointer', marginLeft: '4px', fontSize: '13px' }}>
+                                    {view === 'signup' ? 'Sign In' : 'Sign Up'}
+                                </button>
+                            </p>
+                        </>
                     )}
-
-                    <p style={{ marginTop: '20px', fontSize: '12px', color: '#334155', textAlign: 'center', lineHeight: 1.5 }}>
-                        By signing in, you agree to use this platform for supply chain management purposes.
-                    </p>
                 </div>
             </div>
         </div>

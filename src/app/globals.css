@@ -1,20 +1,44 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/icon?family=Material+Icons+Outlined');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
+
 @import "tailwindcss";
 
+@theme {
+  --font-sans: 'Inter', sans-serif;
+  --font-display: 'Inter', sans-serif;
+  --color-primary: #6366f1;
+  --color-background-light: #f3f4f6;
+  --color-background-dark: #0f111a;
+  --color-card-light: #ffffff;
+  --color-card-dark: #1a1c29;
+  --color-panel-light: #ffffff;
+  --color-panel-dark: #1e293b;
+  --color-border-light: #e5e7eb;
+  --color-border-dark: #2d3042;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-info: #3b82f6;
+  --color-accent-blue: #60a5fa;
+  --color-accent-red: #ef4444;
+  --color-accent-purple: #8b5cf6;
+}
+
 :root {
-  --bg-primary: #070b14;
-  --bg-secondary: #0d1424;
-  --bg-card: #111827;
-  --bg-glass: rgba(17, 24, 39, 0.7);
-  --border-glass: rgba(99, 179, 237, 0.15);
-  --accent-cyan: #22d3ee;
-  --accent-teal: #14b8a6;
+  --bg-primary: #0f111a;
+  --bg-secondary: #0b1120;
+  --bg-card: #1a1c29;
+  --bg-glass: rgba(26, 28, 41, 0.7);
+  --border-glass: rgba(255, 255, 255, 0.05);
+  --accent-cyan: #6366f1;
+  --accent-teal: #60a5fa;
   --accent-blue: #3b82f6;
   --accent-purple: #8b5cf6;
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted: #475569;
-  --risk-low: #22c55e;
+  --text-primary: #f3f4f6;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+  --risk-low: #10b981;
   --risk-medium: #f59e0b;
   --risk-high: #ef4444;
 }
@@ -33,38 +57,42 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   scrollbar-width: thin;
-  scrollbar-color: #1e293b transparent;
+  scrollbar-color: #374151 #1a1c29;
+}
+
+.dark {
+  color-scheme: dark;
 }
 
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: #1a1c29;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 3px;
+  background: #374151;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #4b5563;
 }
 
 /* Glassmorphism utility */
 .glass {
   background: var(--bg-glass);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border: 1px solid var(--border-glass);
 }
 
 /* Glow effects */
 .glow-cyan {
-  box-shadow: 0 0 20px rgba(34, 211, 238, 0.2);
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
 }
 
 .glow-blue {
@@ -94,7 +122,7 @@ body {
 
 /* Leaflet overrides for dark mode */
 .leaflet-container {
-  background: #0d1424 !important;
+  background: #0b1120 !important;
   font-family: 'Inter', sans-serif !important;
 }
 
@@ -103,26 +131,26 @@ body {
 }
 
 .leaflet-control-attribution {
-  background: rgba(7, 11, 20, 0.8) !important;
-  color: #475569 !important;
+  background: rgba(15, 17, 26, 0.8) !important;
+  color: #6b7280 !important;
 }
 
 .leaflet-popup-content-wrapper {
-  background: #111827 !important;
-  color: #f1f5f9 !important;
-  border: 1px solid rgba(99, 179, 237, 0.2) !important;
-  box-shadow: 0 0 20px rgba(34, 211, 238, 0.15) !important;
+  background: #1a1c29 !important;
+  color: #f3f4f6 !important;
+  border: 1px solid rgba(99, 102, 241, 0.2) !important;
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.15) !important;
   border-radius: 10px !important;
 }
 
 .leaflet-popup-tip {
-  background: #111827 !important;
+  background: #1a1c29 !important;
 }
 
 .leaflet-control-zoom a {
-  background: #111827 !important;
-  color: #94a3b8 !important;
-  border-color: rgba(99, 179, 237, 0.2) !important;
+  background: #1a1c29 !important;
+  color: #9ca3af !important;
+  border-color: rgba(99, 102, 241, 0.2) !important;
 }
 
 /* Pulse animation */
@@ -159,7 +187,7 @@ body {
 }
 
 .shimmer {
-  background: linear-gradient(90deg, #111827 25%, #1e293b 50%, #111827 75%);
+  background: linear-gradient(90deg, #1a1c29 25%, #2d3042 50%, #1a1c29 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
