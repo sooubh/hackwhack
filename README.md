@@ -1,5 +1,10 @@
 # SupplyGuard AI 🛡️
 
+![Next.js](https://img.shields.io/badge/Next.js-black?style=flat-square&logo=next.js&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=flat-square&logo=react&logoColor=61DAFB)
+![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=flat-square&logo=firebase&logoColor=white)
+![Gemini](https://img.shields.io/badge/Google_Gemini-8E75B2?style=flat-square&logo=google&logoColor=white)
+
 **SupplyGuard AI** is a next-generation Supply Chain Disruption & Prediction Platform. It leverages the blazing-fast Gemini 2.0 Flash Multimodal Live API and a real-time isolated Firebase backend to provide global logistics managers with an interactive, intelligent "What-If" analysis console.
 
 ## ✨ Features
@@ -61,11 +66,11 @@ Because the platform uses Tenant-Isolated databases, your dashboard will be empt
 
 *Built with ❤️ utilizing the capabilities of the Gemini API.*
 
-👉 6 Pages Total
+### �️ Platform Structure (6 Pages Total)
 
-Login
-Dashboard ⭐
-Network Map
-Risk Analysis
-Predictions & Suggestions
-Voice Assistant / Alerts
+- 🔐 **Login** - Secure tenant authentication
+- 📊 **Dashboard ⭐** - High-level metrics and alerts
+- 🌍 **Network Map** - Interactive global logistics visualization
+- ⚠️ **Risk Analysis** - Deep-dive into specific disruptions
+- 🔮 **Predictions & Suggestions** - AI-generated alternative routes
+- 🗣️ **Voice Assistant / Alerts** - Two-way voice interaction with Gemini
