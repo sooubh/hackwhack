@@ -9,7 +9,6 @@ const navItems = [
     { href: '/risk-map', icon: 'map', label: 'Supply Map' },
     { href: '/alerts', icon: 'notifications', label: 'Alerts' },
     { href: '/settings', icon: 'settings', label: 'Settings' },
-    { href: '/profile', icon: 'person', label: 'My Profile' },
 ];
 
 export default function Sidebar() {
