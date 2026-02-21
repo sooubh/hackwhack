@@ -5,13 +5,12 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { calculateNodeRisk } from '@/services/riskEngine';
 import { generatePredictions } from '@/services/predictionEngine';
 import { generateReport } from '@/services/reportGenerator';
-import { orders as staticOrders } from '@/data/orders';
 import { auth, db } from '@/services/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 
 export default function PredictionsDashboard() {
-    const { nodes, events, routes } = useData();
+    const { nodes, events, routes, orders } = useData();
     const { theme: t } = useTheme();
     const [selectedNode, setSelectedNode] = useState(null);
     const [riskData, setRiskData] = useState(null);
@@ -77,7 +76,7 @@ export default function PredictionsDashboard() {
         setRiskData(rd);
         setActiveTab('overview');
         try {
-            setAnalysis(generatePredictions(node, rd, events, nodes, routes, staticOrders));
+            setAnalysis(generatePredictions(node, rd, events, nodes, routes, orders || []));
         } catch (err) { console.error("Prediction error:", err); }
     };
 
@@ -91,7 +90,7 @@ export default function PredictionsDashboard() {
 
     const handleResolveNode = (node) => {
         const rd = calculateNodeRisk(node, events);
-        const fullAnalysis = generatePredictions(node, rd, events, nodes, routes, staticOrders);
+        const fullAnalysis = generatePredictions(node, rd, events, nodes, routes, orders || []);
         const reportId = generateReport({
             type: 'suggestion',
             details: {

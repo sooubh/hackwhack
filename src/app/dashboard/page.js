@@ -12,7 +12,6 @@ import { getNetworkStats, calculateNodeRisk } from '@/services/riskEngine';
 import { generatePredictions } from '@/services/predictionEngine';
 import { useData } from '@/contexts/DataContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { orders as staticOrders } from '@/data/orders';
 
 function OrderRow({ order, allNodes, t }) {
     const statusColors = { on_schedule: t.success, delayed: t.danger, at_risk: t.warning, in_transit: t.info };
@@ -64,8 +63,24 @@ function RiskBar({ label, count, total, color, t }) {
 }
 
 export default function DashboardPage() {
-    const { nodes, events, alerts, routes, loading } = useData();
+    const { nodes, events, alerts, routes, orders, loading } = useData();
     const { theme: t } = useTheme();
+
+    const stats = getNetworkStats(nodes || [], events || []);
+    const unreadAlerts = alerts?.filter(a => !a.read).length || 0;
+    const delayedOrders = (orders || []).filter(o => o.delayDays > 0);
+
+    // AI preview: analyze the highest-risk node
+    const aiPreview = useMemo(() => {
+        if (!nodes || nodes.length === 0) return null;
+        const topNode = [...nodes].sort((a, b) => calculateNodeRisk(b, events).score - calculateNodeRisk(a, events).score)[0];
+        if (!topNode) return null;
+        const rd = calculateNodeRisk(topNode, events);
+        try {
+            const analysis = generatePredictions(topNode, rd, events, nodes, routes, orders || []);
+            return { node: topNode, riskData: rd, ...analysis };
+        } catch { return null; }
+    }, [nodes, events, routes, orders]);
 
     if (loading) {
         return (
@@ -79,22 +94,6 @@ export default function DashboardPage() {
         );
     }
 
-    const stats = getNetworkStats(nodes || [], events || []);
-    const unreadAlerts = alerts?.filter(a => !a.read).length || 0;
-    const delayedOrders = staticOrders.filter(o => o.delayDays > 0);
-
-    // AI preview: analyze the highest-risk node
-    const aiPreview = useMemo(() => {
-        if (!nodes || nodes.length === 0) return null;
-        const topNode = [...nodes].sort((a, b) => calculateNodeRisk(b, events).score - calculateNodeRisk(a, events).score)[0];
-        if (!topNode) return null;
-        const rd = calculateNodeRisk(topNode, events);
-        try {
-            const analysis = generatePredictions(topNode, rd, events, nodes, routes, staticOrders);
-            return { node: topNode, riskData: rd, ...analysis };
-        } catch { return null; }
-    }, [nodes, events, routes]);
-
     return (
         <AuthGuard>
             {(user) => (
@@ -105,7 +104,7 @@ export default function DashboardPage() {
 
                         {/* KPIs */}
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '28px' }}>
-                            <KpiCard title="Active Orders" value={staticOrders.length} icon="inventory_2" colorClass="primary" trendValue={`${delayedOrders.length} delayed`} trend="up" />
+                            <KpiCard title="Active Orders" value={(orders || []).length} icon="inventory_2" colorClass="primary" trendValue={`${delayedOrders.length} delayed`} trend="up" />
                             <KpiCard title="Network Nodes" value={nodes?.length || 0} icon="hub" colorClass="info" subtitle={`${stats.high} at risk`} />
                             <KpiCard title="Unread Alerts" value={unreadAlerts} icon="notifications_active" colorClass={unreadAlerts > 0 ? 'danger' : 'success'} trendValue={unreadAlerts > 0 ? 'Action needed' : 'All clear'} trend={unreadAlerts > 0 ? 'up' : 'down'} />
                             <KpiCard title="Avg Risk Score" value={`${stats.avg}/100`} icon="speed" colorClass={stats.avg >= 66 ? 'danger' : stats.avg >= 33 ? 'warning' : 'success'} subtitle={stats.avg >= 50 ? 'Elevated' : 'Normal'} />
@@ -122,7 +121,7 @@ export default function DashboardPage() {
                                         AI Analysis <span className="material-icons-outlined" style={{ fontSize: '14px' }}>arrow_forward</span>
                                     </Link>
                                 </div>
-                                {staticOrders.map(order => (
+                                {(orders || []).map(order => (
                                     <OrderRow key={order.id} order={order} allNodes={nodes} t={t} />
                                 ))}
                             </div>

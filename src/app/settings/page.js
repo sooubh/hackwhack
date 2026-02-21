@@ -5,8 +5,13 @@ import Sidebar from '@/components/Sidebar';
 import TopBar from '@/components/TopBar';
 import { useTheme } from '@/contexts/ThemeContext';
 import { db, auth, updateUserProfile, changePassword, signOut } from '@/services/firebase';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, collection, writeBatch, getDocs, deleteDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
+import { nodes as seedNodes } from '@/data/supplyChain';
+import { routes as seedRoutes } from '@/data/supplyChain';
+import { events as seedEvents } from '@/data/events';
+import { alerts as seedAlerts } from '@/data/alerts';
+import { orders as seedOrders } from '@/data/orders';
 import toast from 'react-hot-toast';
 
 export default function SettingsPage() {
@@ -19,6 +24,8 @@ export default function SettingsPage() {
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [changingPw, setChangingPw] = useState(false);
+    const [seeding, setSeeding] = useState(false);
+    const [erasing, setErasing] = useState(false);
 
     useEffect(() => {
         const user = auth.currentUser;
@@ -63,6 +70,40 @@ export default function SettingsPage() {
         router.push('/login');
     };
 
+    const handleSeedData = async () => {
+        const user = auth.currentUser;
+        if (!user || !db) return;
+        setSeeding(true);
+        try {
+            const basePath = `users/${user.uid}`;
+            const batch = writeBatch(db);
+            seedNodes.forEach(n => batch.set(doc(db, `${basePath}/nodes`, n.id), n));
+            seedRoutes.forEach(r => batch.set(doc(db, `${basePath}/routes`, r.id), r));
+            seedEvents.forEach(e => batch.set(doc(db, `${basePath}/events`, e.id), e));
+            seedAlerts.forEach(a => batch.set(doc(db, `${basePath}/alerts`, a.id), a));
+            seedOrders.forEach(o => batch.set(doc(db, `${basePath}/orders`, o.id), o));
+            await batch.commit();
+            toast.success('✅ Dummy data seeded with nodes, routes, events, alerts & orders!');
+        } catch (err) { toast.error('Seed failed: ' + err.message); }
+        finally { setSeeding(false); }
+    };
+
+    const handleEraseData = async () => {
+        const user = auth.currentUser;
+        if (!user || !db) return;
+        if (!confirm('Are you sure? This will delete ALL your supply chain data.')) return;
+        setErasing(true);
+        try {
+            const basePath = `users/${user.uid}`;
+            for (const col of ['nodes', 'routes', 'events', 'alerts', 'orders', 'settings']) {
+                const snap = await getDocs(collection(db, `${basePath}/${col}`));
+                for (const d of snap.docs) await deleteDoc(d.ref);
+            }
+            toast.success('🗑️ All data erased!');
+        } catch (err) { toast.error('Erase failed: ' + err.message); }
+        finally { setErasing(false); }
+    };
+
     const inputStyle = { width: '100%', padding: '10px 14px', background: t.bg, border: `1px solid ${t.border}`, borderRadius: '10px', color: t.text, fontSize: '14px', outline: 'none', boxSizing: 'border-box' };
     const labelStyle = { fontSize: '13px', fontWeight: 600, color: t.textSecondary, display: 'block', marginBottom: '6px' };
     const cardStyle = { background: t.bgCard, border: `1px solid ${t.border}`, borderRadius: '16px', padding: '24px', marginBottom: '20px' };
@@ -70,6 +111,7 @@ export default function SettingsPage() {
         { id: 'profile', label: 'Profile', icon: 'person' },
         { id: 'preferences', label: 'Preferences', icon: 'tune' },
         { id: 'security', label: 'Security', icon: 'lock' },
+        { id: 'data', label: 'Data', icon: 'storage' },
         { id: 'account', label: 'Account', icon: 'manage_accounts' },
     ];
 
@@ -226,6 +268,56 @@ export default function SettingsPage() {
                                             {changingPw ? 'Changing...' : 'Change Password'}
                                         </button>
                                     </div>
+                                )}
+
+                                {/* DATA MANAGEMENT */}
+                                {activeSection === 'data' && (
+                                    <>
+                                        <div style={cardStyle}>
+                                            <h2 style={{ fontSize: '18px', fontWeight: 700, color: t.heading, margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span className="material-icons-outlined" style={{ color: t.primary }}>cloud_upload</span> Seed Dummy Data
+                                            </h2>
+                                            <p style={{ fontSize: '13px', color: t.textMuted, marginBottom: '16px' }}>
+                                                Populate your database with India supply chain data for testing and demos.
+                                            </p>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '16px' }}>
+                                                {[
+                                                    { label: 'Nodes', count: seedNodes.length, icon: 'hub', desc: 'Factories, ports, hubs' },
+                                                    { label: 'Routes', count: seedRoutes.length, icon: 'alt_route', desc: 'Supply routes' },
+                                                    { label: 'Events', count: seedEvents.length, icon: 'flash_on', desc: 'Disruption events' },
+                                                    { label: 'Alerts', count: seedAlerts.length, icon: 'notifications', desc: 'Risk alerts' },
+                                                    { label: 'Orders', count: seedOrders.length, icon: 'local_shipping', desc: 'B2B orders with delays' },
+                                                ].map((item, i) => (
+                                                    <div key={i} style={{ background: t.bg, border: `1px solid ${t.border}`, borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
+                                                        <span className="material-icons-outlined" style={{ fontSize: '20px', color: t.primary, display: 'block', marginBottom: '4px' }}>{item.icon}</span>
+                                                        <div style={{ fontSize: '18px', fontWeight: 800, color: t.heading }}>{item.count}</div>
+                                                        <div style={{ fontSize: '11px', color: t.textMuted }}>{item.label}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div style={{ background: t.infoBg, border: `1px solid ${t.infoBorder}`, borderRadius: '10px', padding: '12px', fontSize: '12px', color: t.info, marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span className="material-icons-outlined" style={{ fontSize: '16px' }}>info</span>
+                                                Includes delayed orders with risk scenarios — monsoon disruptions, port congestion, trucker strikes, and more.
+                                            </div>
+                                            <button onClick={handleSeedData} disabled={seeding} style={{ padding: '12px 28px', background: t.primary, color: '#fff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: seeding ? 'not-allowed' : 'pointer', opacity: seeding ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span className="material-icons-outlined" style={{ fontSize: '18px' }}>{seeding ? 'hourglass_top' : 'cloud_upload'}</span>
+                                                {seeding ? 'Seeding Data...' : 'Seed Dummy Data'}
+                                            </button>
+                                        </div>
+
+                                        <div style={{ ...cardStyle, borderColor: t.dangerBorder }}>
+                                            <h2 style={{ fontSize: '18px', fontWeight: 700, color: t.danger, margin: '0 0 8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span className="material-icons-outlined">delete_forever</span> Erase All Data
+                                            </h2>
+                                            <p style={{ fontSize: '13px', color: t.textMuted, marginBottom: '14px' }}>
+                                                Permanently delete all your supply chain data — nodes, routes, events, alerts, orders, and resolved items.
+                                            </p>
+                                            <button onClick={handleEraseData} disabled={erasing} style={{ padding: '12px 28px', background: t.danger, color: '#fff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: erasing ? 'not-allowed' : 'pointer', opacity: erasing ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <span className="material-icons-outlined" style={{ fontSize: '18px' }}>{erasing ? 'hourglass_top' : 'delete_forever'}</span>
+                                                {erasing ? 'Erasing...' : 'Erase All Data'}
+                                            </button>
+                                        </div>
+                                    </>
                                 )}
 
                                 {/* ACCOUNT */}

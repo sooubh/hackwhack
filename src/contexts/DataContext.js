@@ -16,6 +16,7 @@ export function DataProvider({ children }) {
     const [routes, setRoutes] = useState([]);
     const [events, setEvents] = useState([]);
     const [alerts, setAlerts] = useState([]);
+    const [orders, setOrders] = useState([]);
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -32,6 +33,7 @@ export function DataProvider({ children }) {
                 setRoutes([]);
                 setEvents([]);
                 setAlerts([]);
+                setOrders([]);
                 setLoading(false);
             }
         });
@@ -53,6 +55,7 @@ export function DataProvider({ children }) {
         let unsubscribeRoutes = null;
         let unsubscribeEvents = null;
         let unsubscribeAlerts = null;
+        let unsubscribeOrders = null;
 
         try {
             const basePath = `users/${userId}`;
@@ -85,6 +88,13 @@ export function DataProvider({ children }) {
                 setAlerts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
             }, (err) => setError(err.message));
 
+            // Listen to Orders
+            const qOrders = query(collection(db, `${basePath}/orders`));
+            unsubscribeOrders = onSnapshot(qOrders, (snapshot) => {
+                if (!isMounted) return;
+                setOrders(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            }, (err) => setError(err.message));
+
             setLoading(false);
 
         } catch (err) {
@@ -99,6 +109,7 @@ export function DataProvider({ children }) {
             if (unsubscribeRoutes) unsubscribeRoutes();
             if (unsubscribeEvents) unsubscribeEvents();
             if (unsubscribeAlerts) unsubscribeAlerts();
+            if (unsubscribeOrders) unsubscribeOrders();
         };
     }, [userId]);
 
@@ -107,6 +118,7 @@ export function DataProvider({ children }) {
         routes,
         events,
         alerts,
+        orders,
         loading,
         error
     };
