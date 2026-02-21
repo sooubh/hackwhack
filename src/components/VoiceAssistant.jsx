@@ -9,7 +9,7 @@ const MODEL = "models/gemini-2.5-flash-native-audio-preview-12-2025";
 const HOST = "generativelanguage.googleapis.com";
 
 export default function VoiceAssistant() {
-    const { nodes, alerts, events } = useData();
+    const { nodes, alerts, events, orders, routes } = useData();
     const networkStats = getNetworkStats(nodes || [], events || []);
     const [open, setOpen] = useState(false);
     const [connected, setConnected] = useState(false);
@@ -109,7 +109,13 @@ Current Network Status:
 - Average Risk Score: ${networkStats.avg}/100
 - High Risk Nodes: ${networkStats.high}
 - Active Alerts: ${(alerts || []).length}
-Speak naturally and concisely since this is a real-time voice conversation. Keep answers to less than 3 sentences.`;
+
+LIVE SUPPLY CHAIN DATA:
+Nodes (Cities/Hubs): ${JSON.stringify((nodes || []).map(n => ({ id: n.id, name: n.name, type: n.type, region: n.region, reliability: n.reliability })))}
+Active Disruption Events: ${JSON.stringify((events || []).map(e => ({ title: e.title, type: e.type, severity: e.severity, affectedNodes: e.affectedNodes })))}
+Active Orders: ${JSON.stringify((orders || []).map(o => ({ id: o.id, name: o.name, status: o.status, origin: o.origin, dest: o.destination, delayDays: o.delayDays, riskReason: o.riskReason })))}
+
+Speak naturally and concisely since this is a real-time voice conversation. Answer any questions the user has about their supply chain, orders, or delays based ONLY on the data provided above. Keep answers to less than 3 sentences.`;
 
         const setupMessage = {
             setup: {
