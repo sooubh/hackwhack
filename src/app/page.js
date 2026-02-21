@@ -23,12 +23,10 @@ export default function HomePage() {
   ];
 
   const gradientBg = mode === 'dark'
-    ? 'linear-gradient(135deg, #0f111a 0%, #1a1040 40%, #0f111a 100%)'
-    : 'linear-gradient(135deg, #f5f7fa 0%, #e8e0f0 40%, #f5f7fa 100%)';
+    ? 'linear-gradient(160deg, #0a0c14 0%, #111827 50%, #0a0c14 100%)'
+    : 'linear-gradient(160deg, #f8fafc 0%, #eef2ff 50%, #f8fafc 100%)';
 
-  const heroGradient = mode === 'dark'
-    ? 'linear-gradient(135deg, #6366f1, #8b5cf6, #a855f7)'
-    : 'linear-gradient(135deg, #4f46e5, #7c3aed, #9333ea)';
+  const heroGradient = 'linear-gradient(135deg, #06b6d4, #3b82f6, #8b5cf6)';
 
   return (
     <div style={{ minHeight: '100vh', background: gradientBg, color: t.text, fontFamily: "'Inter', sans-serif", overflow: 'hidden' }}>
